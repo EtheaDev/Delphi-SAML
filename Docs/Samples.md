@@ -102,7 +102,7 @@ end;
 
 ## Verify a file
 
-```
+```pascal
 function verify_file(const xml_file, key_file: PAnsiChar): Boolean;
 var
   doc: xmlDocPtr;
