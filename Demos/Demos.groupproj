@@ -1,0 +1,60 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{A725B9B2-8229-4D96-8F73-7B24A69D6E1C}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="SAML\SPDemo.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="XmlSec\XmlSecDemo.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Metadata\MetadataDemo.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="SPDemo">
+        <MSBuild Projects="SAML\SPDemo.dproj"/>
+    </Target>
+    <Target Name="SPDemo:Clean">
+        <MSBuild Projects="SAML\SPDemo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="SPDemo:Make">
+        <MSBuild Projects="SAML\SPDemo.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="XmlSecDemo">
+        <MSBuild Projects="XmlSec\XmlSecDemo.dproj"/>
+    </Target>
+    <Target Name="XmlSecDemo:Clean">
+        <MSBuild Projects="XmlSec\XmlSecDemo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="XmlSecDemo:Make">
+        <MSBuild Projects="XmlSec\XmlSecDemo.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MetadataDemo">
+        <MSBuild Projects="Metadata\MetadataDemo.dproj"/>
+    </Target>
+    <Target Name="MetadataDemo:Clean">
+        <MSBuild Projects="Metadata\MetadataDemo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MetadataDemo:Make">
+        <MSBuild Projects="Metadata\MetadataDemo.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="SPDemo;XmlSecDemo;MetadataDemo"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="SPDemo:Clean;XmlSecDemo:Clean;MetadataDemo:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="SPDemo:Make;XmlSecDemo:Make;MetadataDemo:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

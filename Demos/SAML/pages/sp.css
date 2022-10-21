@@ -1,0 +1,22 @@
+li 
+{
+    margin-bottom: 10px;
+}
+  
+.button 
+{
+    font-size: 14px;
+    font-weight: bold;
+    padding: 10px 0px 10px 0px;
+    border-radius: 10px;
+    border: 2px solid #222;
+    overflow-wrap: anywhere;
+    width: 20em;
+    margin: 2px;
+}
+
+#txt 
+{
+    font-weight: 100;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+}

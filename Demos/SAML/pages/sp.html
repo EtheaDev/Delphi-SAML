@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAML Service Provider Home</title>
+  <link href='sp.css' rel="stylesheet">
+</head>
+
+<body>
+<center>
+  <h1>SAML Service Provider Home</h1>
+
+  <div>
+    <button id="showb" class="button" style="color: #444; background-color: #eee;">Show SAML AuthnRequest</button>
+  </div>
+  <div>
+    <button id="slo" class="button" style="color: #444; background-color: #ff5722;">SAML Single Logout</button>
+  </div>
+  <p>
+  <textarea  rows="6" cols="150" id="result" hidden></textarea>
+  </p>
+  <br>
+  <p id="sendReq" display="none">
+  <div id="txt"hidden><span>Send the request to configured Single Sign On URL of the Identity Provider</span></div>
+  <br><br>
+  <div>
+  <button id="sendb" class="button" style="color: #060; background-color: #85b4f5; font-variant: small-caps;" hidden>Send Request</button>
+  </div>
+  </p>
+  <script>
+
+    const showb = document.querySelector("#showb")
+    showb.addEventListener("click", function () {
+    const txt = document.querySelector("#txt");
+    txt.hidden = false;
+    const sendb = document.querySelector("#sendb");
+    sendb.hidden = false;
+      fetch('/issue?showdecoded=true')
+        .then(response => response.text())
+        .then(data => {
+          const result = document.querySelector("#result");
+          result.innerHTML = data;
+          result.hidden = false;
+          const sendRequestP = document.querySelector("#sendReq")
+          sendRequestP.style.display = "block"
+        })
+    });
+
+    const slo = document.querySelector("#slo")
+    slo.addEventListener("click", function () {
+		window.location.href="/logout"
+	});
+
+    const sendAuthnReq = document.querySelector("#sendb")
+    sendAuthnReq.addEventListener("click", function () {
+      fetch('/issue')
+        .then(response => response.text())
+        .then(data => {
+          window.location.href=data
+        });
+
+
+    })
+  </script>
+  </center>
+</body>
+
+</html>

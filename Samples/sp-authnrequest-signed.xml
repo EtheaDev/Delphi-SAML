@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF8"?>
+<samlp:AuthnRequest xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" ID="SAML_270480860" IssueInstant="2022-09-21T10:21:03.609+02:00" ProtocolBinding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Version="2.0" Destination="https://samltest.id/idp/profile/SAML2/Redirect/SSO">
+  <saml:Issuer xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion">urn:test.lucaminuti:sp</saml:Issuer>
+  <Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+    <SignedInfo>
+      <CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+      <SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>
+      <Reference URI="">
+        <Transforms>
+          <Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+        </Transforms>
+        <DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+        <DigestValue>VfQSZu2jOwms42DLW4UFRYZlk5o=</DigestValue>
+      </Reference>
+    </SignedInfo>
+    <SignatureValue>dzxGb07U8ksQXMYzLAaPPt0vh0ECyvZBP3LQ35LcGHwxoo9xh4Gbp885VQxpNKNQ
+E3aqMs0YgqkPoRUfsq1hZE7tbe5c1cnahFDGPyUT+yHIi3ecvhWeNy9Fx2r0bBMZ
+VqwBwsJK56ATIR/Uwl69hvNvBEzXMohA5n6e8sRKIPinLqlQMtm0WXW9l7DePEmE
+0+MW8jlbOYQt1Byk4kwg/0HLw0DaGw6gGg5ouHnh1kyET81n/nyb8q/DubFnTyKh
+BIyFSK9EBieCipBif812mBgKBu8nwCcoe9HyCisUethKwS901u1adaPWbL66w+3F
+tkEJWIPLS0Cfw5lmhOjDtNHPxKg3poevAmE/Af5TE8h2LjJtrpIozyqzhT3SpHOO
+VQ7pnoW8DehMwIFlRd+Wkp8G7nCpaYgBXjTM5BFt/ALNVyTKdX2vW1brY13fajKf
+acov8JWccBTJX4nruNlbaS4TUivyQ0ztrobcQAMRy2khcz4em2a35Z0ax0+5eoGo</SignatureValue>
+    <KeyInfo>
+      <KeyName/>
+    </KeyInfo>
+  </Signature>
+  <samlp:NameIDPolicy Format="urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress" AllowCreate="true"/>
+  <samlp:RequestedAuthnContext Comparison="exact">
+    <saml:AuthnContextClassRef xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion">urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport</saml:AuthnContextClassRef>
+  </samlp:RequestedAuthnContext>
+</samlp:AuthnRequest>
