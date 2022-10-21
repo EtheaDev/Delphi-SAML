@@ -106,6 +106,7 @@ var
 implementation
 
 uses
+  System.Types,
   SAML.Core, SAML.XML.Utils;
 
 {$R *.dfm}
@@ -172,7 +173,7 @@ end;
 
 procedure TMainForm.LoadIdPPresets;
 var
-  LFiles: TArray<string>;
+  LFiles: TStringDynArray;
   LFileName: string;
 begin
   edtIdPPresets.Items.Clear;
@@ -193,7 +194,11 @@ end;
 
 procedure TMainForm.LoadSPPresets;
 var
+{$if CompilerVersion > 32}
   LFiles: TArray<string>;
+{$else}
+  LFiles: TStringDynArray;
+{$endif}
   LFileName: string;
 begin
   edtSPPresets.Items.Clear;

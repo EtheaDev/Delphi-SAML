@@ -75,7 +75,9 @@ implementation
 
 {$R *.dfm}
 
-uses SAML.Config, SAML.Core, SAML.XML.Utils;
+uses
+  System.Types,
+  SAML.Config, SAML.Core, SAML.XML.Utils;
 
 procedure TMainForm.ShowMetadata(AMetadata: TSAMLMetadata);
 var
@@ -207,7 +209,7 @@ end;
 
 procedure TMainForm.LoadXML;
 var
-  LFiles: TArray<string>;
+  LFiles: TStringDynArray;
   LFileName: string;
 begin
   edtMetatadata.Items.Clear;

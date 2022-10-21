@@ -78,6 +78,7 @@ implementation
 {$R *.dfm}
 
 uses
+  System.Types,
   SAML.XML.Utils;
 
 procedure TMainForm.btnEncryptClick(Sender: TObject);
@@ -182,7 +183,7 @@ end;
 
 procedure TMainForm.FillCombos;
 var
-  LFiles: TArray<string>;
+  LFiles: TStringDynArray;
   LFileName: string;
 begin
   LFiles := TDirectory.GetFiles(ExtractFilePath(Application.ExeName), '*.xml');
