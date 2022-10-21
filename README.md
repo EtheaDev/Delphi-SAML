@@ -1,5 +1,7 @@
 # Delphi SAML implementation
 
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) 
+
 `Delphi SAML` is a SAML implementation written on top of [xmlsec](https://www.aleksey.com/xmlsec/). The basic idea behind the code comes from [samltools](https://github.com/monmohan/samltools). 
 
 
@@ -86,5 +88,5 @@ If you want to sign you request you need a private and a public key. You can gen
 keygen.bat -h sp.samltools.com -e urn:msingh.samltools:sp -y 10
 ```
 
-See [CommandLine](docs/CommandLine.md) for further detail.
+See [command line](Docs/CommandLine.md) for further detail.
 
