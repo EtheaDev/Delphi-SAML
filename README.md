@@ -24,26 +24,39 @@
 
 ## Installation
 
-Download all zip from https://www.zlatkovic.com/pub/libxml/
+Download all zip files from https://www.zlatkovic.com/pub/libxml/ and extract all DLLs into the demos\bin folder.
 
-* libxmlsec.dll: main DLL
-    * libxml2.dll: to handle XML
-        * iconv.dll: to convert between charsets
-    * libxmlsec-mscrypto.dll: if you want to use cryptographics functions from mscrypto (install mscrypto from MS)
-    * libxmlsec-openssl.dll: or if you want to use cryptographics functions from openssl
-        * libeay32.dll
-        * ssleay32.dll
-  * zlib1.dll: compression... but I'm not sure who need it
-  * libexslt.dll: xsl transformations (optional)
-  * libxslt.dll: xsl transformations (optional)
+* `libxmlsec.dll`: main DLL
+    * `libxml2.dll`: to handle XML
+        * `iconv.dll`: to convert between charsets
+    * `libxmlsec-mscrypto.dll`: if you want to use cryptographics functions from *msCrypto* (install msCrypto from MS)
+    * `libxmlsec-openssl.dll`: or if you want to use cryptographics functions from *OpenSSL*
+        * `libeay32.dll`
+        * `ssleay32.dll`
+  * `zlib1.dll`: compression... but I'm not sure who need it
+  * `libexslt.dll`: xsl transformations (optional)
+  * `libxslt.dll`: xsl transformations (optional)
 
+If you want you can extract `xmlsec.exe` and `openssl.exe`. The first can be used to test XML signing and encryption, and the second to handle certificates and cryptography.
 
 ## TODO
 
-* Better metadata support
-* Identity provider implementation
-* Password protected certificate support
-* Basic key format conversion (PEM, DER, ...)
+* 📌 Better metadata support
+* 📌 Password protected certificate support
+* ✨ Identity provider implementation
+* ✨ Basic key format conversion (PEM, DER, ...)
+
+## Documentation
+
+`Delphi SAML` consists of some modules:
+
+* The cryptographic units: used to handle signing and encryption
+* The SAML message units: to build request and parse response
+* The metadata unit: to read and write metadata
+* The demos: to see how `Delphi SAML` works
+
+If you need more help you can read the [API documentation](Docs/APIDoc.md).
+
 ## License
 
 `Delphi SAML` is released under the term of the *Apache License*. Here follows the licenses of all dependencies:
@@ -67,7 +80,7 @@ SAML documentation:
 * http://docs.oasis-open.org/security/saml/v2.0/saml-2.0-os.zip
 * https://developer.okta.com/docs/concepts/saml/
 * https://shibboleth.atlassian.net/wiki/spaces/CONCEPT/overview
-* https://en.wikipedia.org/wiki/SAML_2.0#SAML_Attribute_Query
+* https://en.wikipedia.org/wiki/SAML_2.0
 
 XML-Sec API:
 
