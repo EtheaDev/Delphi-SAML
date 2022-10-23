@@ -37,6 +37,11 @@ type
     IdP
   );
 
+  TCertificateFormat = (
+    Der,
+    Pem
+  );
+
   {$SCOPEDENUMS OFF}
 
   ESAMLMetadataError = class(ESAMLError)
@@ -53,7 +58,8 @@ type
     function SetLocation(const ALocation: string): ISAMLMetadataBuilder;
     function SetAuthnRequestsSigned(AAuthnRequestsSigned: Boolean): ISAMLMetadataBuilder;
     function SetWantAssertionsSigned(AWantAssertionsSigned: Boolean): ISAMLMetadataBuilder;
-    function AddX509Certificate(const AUse: string; ACertificate: TStream; AOwnsStream: Boolean): ISAMLMetadataBuilder;
+    function AddX509Certificate(const AUse: string; ACertificate: TStream; AOwnsStream: Boolean): ISAMLMetadataBuilder; overload;
+    function AddX509Certificate(const AUse: string; ACertificate: TStream; AFormat: TCertificateFormat; AOwnsStream: Boolean): ISAMLMetadataBuilder; overload;
     function Build: TSAMLMetadata;
     function AsXML: string;
   end;
@@ -62,11 +68,19 @@ type
   private
     FUse: string;
     FCertificate: TBytes;
+    FFormat: TCertificateFormat;
   public
     property Use: string read FUse;
     property Certificate: TBytes read FCertificate;
+    property Format: TCertificateFormat read FFormat;
 
-    constructor Create(const AUse: string; ACertificate: TBytes);
+    constructor Create(const AUse: string; ACertificate: TBytes; AFormat: TCertificateFormat = TCertificateFormat.Der);
+  end;
+
+  TKeyDescriptorList = class(TObjectList<TKeyDescriptor>)
+  public
+    procedure AddCertificate(const AUse: string; ACertificate: TStream; AFormat: TCertificateFormat; AOwnsStream: Boolean); overload;
+    procedure AddCertificate(const AUse: string; ACertificate: TBytes; AFormat: TCertificateFormat); overload;
   end;
 
   TSSOService = class(TDictionary<string, string>)
@@ -85,14 +99,14 @@ type
     FLocation: string;
     FSSO: TSSOService;
     FSLO: TSSOService;
-    FKeys: TObjectList<TKeyDescriptor>;
+    FKeys: TKeyDescriptorList;
     FAuthnRequestsSigned: Boolean;
     FWantAssertionsSigned: Boolean;
     FValidUntil: TDateTime;
     FKind: TMetadataKind;
     FConsumerService: TConsumerService;
     procedure ParseXML(AStream: TStream);
-    function GetKeys: TObjectList<TKeyDescriptor>;
+    function GetKeys: TKeyDescriptorList;
     procedure ParseKeyNode(AKeyDescriptor: IXMLNode);
     procedure ParseConsumerServiceNode(AConsumerService: IXMLNode);
   public
@@ -112,7 +126,7 @@ type
     property SSO: TSSOService read FSSO;
     property SLO: TSSOService read FSLO;
     property ConsumerService: TConsumerService read FConsumerService;
-    property Keys: TObjectList<TKeyDescriptor> read GetKeys;
+    property Keys: TKeyDescriptorList read GetKeys;
     function AsXML: string;
   end;
 
@@ -125,13 +139,14 @@ type
     FAuthnRequestsSigned: Boolean;
     FWantAssertionsSigned: Boolean;
     FValidUntil: TDateTime;
-    FKeys: TObjectList<TKeyDescriptor>;
+    FKeys: TKeyDescriptorList;
   public
     { ISAMLMetadataBuilder }
     function SetValidUntil(AValidUntil: TDateTime): ISAMLMetadataBuilder;
     function SetAuthnRequestsSigned(AAuthnRequestsSigned: Boolean): ISAMLMetadataBuilder;
     function SetWantAssertionsSigned(AWantAssertionsSigned: Boolean): ISAMLMetadataBuilder;
-    function AddX509Certificate(const AUse: string; ACertificate: TStream; AOwnsStream: Boolean): ISAMLMetadataBuilder;
+    function AddX509Certificate(const AUse: string; ACertificate: TStream; AOwnsStream: Boolean): ISAMLMetadataBuilder; overload;
+    function AddX509Certificate(const AUse: string; ACertificate: TStream; AFormat: TCertificateFormat; AOwnsStream: Boolean): ISAMLMetadataBuilder; overload;
     function SetProtocolBinding(const AProtocolBinding: string): ISAMLMetadataBuilder;
     function SetEntityID(const AEntityID: string): ISAMLMetadataBuilder;
     function SetCacheDuration(const ACacheDuration: string): ISAMLMetadataBuilder;
@@ -144,6 +159,18 @@ type
   end;
 
 implementation
+
+function EncodeCert(ACertificate: TBytes; AFormat: TCertificateFormat): string;
+var
+  LBuffer: TBytes;
+begin
+  if AFormat = TCertificateFormat.Pem then
+    LBuffer := PemToDer(ACertificate)
+  else
+    LBuffer := ACertificate;
+
+  Result := Base64EncodeStr(LBuffer);
+end;
 
 { TSAMLMetadata }
 
@@ -193,7 +220,7 @@ begin
     LKeyInfo := LKeyDescriptorNode.AddChild('ds:KeyInfo', 'http://www.w3.org/2000/09/xmldsig#');
     LX509Data := LKeyInfo.AddChild('ds:X509Data', 'http://www.w3.org/2000/09/xmldsig#');
     LX509Certificate := LX509Data.AddChild('ds:X509Certificate', 'http://www.w3.org/2000/09/xmldsig#');
-    LX509Certificate.Text := Base64EncodeStr(LKeyDescriptor.Certificate);
+    LX509Certificate.Text := EncodeCert(LKeyDescriptor.Certificate, LKeyDescriptor.FFormat);
   end;
 
   LNameIDFormat := LSPSSODescriptor.AddChild('md:NameIDFormat', 'urn:oasis:names:tc:SAML:2.0:metadata');
@@ -217,7 +244,7 @@ begin
   inherited;
   FSSO := TSSOService.Create;
   FSLO := TSSOService.Create;
-  FKeys := TObjectList<TKeyDescriptor>.Create(True);
+  FKeys := TKeyDescriptorList.Create(True);
   FConsumerService := TConsumerService.Create;
   FProtocolBinding := TSAML.BINDINGS_HTTP_POST;
   FCacheDuration := 'PT604800S';
@@ -239,7 +266,7 @@ begin
   inherited;
 end;
 
-function TSAMLMetadata.GetKeys: TObjectList<TKeyDescriptor>;
+function TSAMLMetadata.GetKeys: TKeyDescriptorList;
 begin
   Result := FKeys;
 end;
@@ -359,16 +386,17 @@ end;
 
 function TSAMLMetadataBuilder.AddX509Certificate(const AUse: string;
   ACertificate: TStream; AOwnsStream: Boolean): ISAMLMetadataBuilder;
-var
-  LData: TBytes;
 begin
-  SetLength(LData, ACertificate.Size);
-  ACertificate.ReadBuffer(LData[0], ACertificate.Size);
+  FKeys.AddCertificate(AUse, ACertificate, TCertificateFormat.Der, AOwnsStream);
 
-  FKeys.Add(TKeyDescriptor.Create(AUse, LData));
+  Result := Self;
+end;
 
-  if AOwnsStream then
-    ACertificate.Free;
+function TSAMLMetadataBuilder.AddX509Certificate(const AUse: string;
+  ACertificate: TStream; AFormat: TCertificateFormat;
+  AOwnsStream: Boolean): ISAMLMetadataBuilder;
+begin
+  FKeys.AddCertificate(AUse, ACertificate, AFormat, AOwnsStream);
 
   Result := Self;
 end;
@@ -412,7 +440,7 @@ end;
 constructor TSAMLMetadataBuilder.Create;
 begin
   inherited;
-  FKeys := TObjectList<TKeyDescriptor>.Create(True);
+  FKeys := TKeyDescriptorList.Create(True);
 end;
 
 destructor TSAMLMetadataBuilder.Destroy;
@@ -472,11 +500,37 @@ end;
 
 { TKeyDescriptor }
 
-constructor TKeyDescriptor.Create(const AUse: string; ACertificate: TBytes);
+constructor TKeyDescriptor.Create(const AUse: string; ACertificate: TBytes; AFormat: TCertificateFormat);
 begin
   inherited Create;
   FUse := AUse;
   FCertificate := ACertificate;
+  FFormat := AFormat;
+end;
+
+{ TKeyDescriptorList }
+
+procedure TKeyDescriptorList.AddCertificate(const AUse: string;
+  ACertificate: TBytes; AFormat: TCertificateFormat);
+var
+  LKeyDescriptor: TKeyDescriptor;
+begin
+  LKeyDescriptor := TKeyDescriptor.Create(AUse, ACertificate, AFormat);
+  Add(LKeyDescriptor);
+end;
+
+procedure TKeyDescriptorList.AddCertificate(const AUse: string;
+  ACertificate: TStream; AFormat: TCertificateFormat; AOwnsStream: Boolean);
+var
+  LData: TBytes;
+begin
+  SetLength(LData, ACertificate.Size);
+  ACertificate.ReadBuffer(LData[0], ACertificate.Size);
+
+  Add(TKeyDescriptor.Create(AUse, LData, AFormat));
+
+  if AOwnsStream then
+    ACertificate.Free;
 end;
 
 end.

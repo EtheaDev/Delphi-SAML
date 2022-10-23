@@ -62,7 +62,7 @@ object MainForm: TMainForm
     Top = 66
     Width = 801
     Height = 537
-    ActivePage = tabReader
+    ActivePage = tabWriter
     Align = alClient
     TabOrder = 1
     object tabReader: TTabSheet
@@ -171,6 +171,144 @@ object MainForm: TMainForm
         end
       end
     end
+    object tabWriter: TTabSheet
+      Caption = 'Writer'
+      ImageIndex = 1
+      object Label2: TLabel
+        Left = 54
+        Top = 32
+        Width = 44
+        Height = 15
+        Alignment = taRightJustify
+        Caption = 'EntityID:'
+      end
+      object Label3: TLabel
+        Left = 49
+        Top = 72
+        Width = 49
+        Height = 15
+        Alignment = taRightJustify
+        Caption = 'Location:'
+      end
+      object Label4: TLabel
+        Left = 6
+        Top = 115
+        Width = 92
+        Height = 15
+        Alignment = taRightJustify
+        Caption = 'Protocol binding:'
+      end
+      object Label5: TLabel
+        Left = 15
+        Top = 152
+        Width = 84
+        Height = 15
+        Alignment = taRightJustify
+        Caption = 'Cache duration:'
+      end
+      object Label6: TLabel
+        Left = 9
+        Top = 188
+        Width = 90
+        Height = 15
+        Alignment = taRightJustify
+        Caption = 'Valid unit (years):'
+      end
+      object Label7: TLabel
+        Left = 42
+        Top = 228
+        Width = 57
+        Height = 15
+        Alignment = taRightJustify
+        Caption = 'Certificate:'
+      end
+      object Label8: TLabel
+        Left = 58
+        Top = 267
+        Width = 41
+        Height = 15
+        Alignment = taRightJustify
+        Caption = 'Format:'
+      end
+      object edtEntityID: TEdit
+        Left = 104
+        Top = 29
+        Width = 353
+        Height = 23
+        TabOrder = 0
+      end
+      object btnNew: TButton
+        Left = 488
+        Top = 19
+        Width = 105
+        Height = 25
+        Caption = 'New'
+        TabOrder = 1
+        OnClick = btnNewClick
+      end
+      object btnWriterSave: TButton
+        Left = 488
+        Top = 50
+        Width = 105
+        Height = 37
+        Caption = 'Save'
+        TabOrder = 2
+        OnClick = btnWriterSaveClick
+      end
+      object edtLocation: TEdit
+        Left = 104
+        Top = 69
+        Width = 353
+        Height = 23
+        TabOrder = 3
+      end
+      object edtProtocolBinding: TComboBox
+        Left = 104
+        Top = 112
+        Width = 353
+        Height = 23
+        TabOrder = 4
+        Items.Strings = (
+          'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST'
+          'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect')
+      end
+      object edtCacheDuration: TEdit
+        Left = 105
+        Top = 149
+        Width = 352
+        Height = 23
+        TabOrder = 5
+        Text = 'PT604800S'
+      end
+      object edtValidUntil: TEdit
+        Left = 105
+        Top = 185
+        Width = 352
+        Height = 23
+        TabOrder = 6
+        Text = '10'
+      end
+      object edtCertificate: TEdit
+        Left = 105
+        Top = 225
+        Width = 352
+        Height = 23
+        TabOrder = 7
+      end
+      object edtCerificateFormat: TComboBox
+        Left = 105
+        Top = 264
+        Width = 353
+        Height = 23
+        Style = csDropDownList
+        ItemIndex = 0
+        TabOrder = 8
+        Text = 'DER'
+        Items.Strings = (
+          'DER'
+          'PEM')
+      end
+    end
   end
   object SaveDialog1: TSaveDialog
     DefaultExt = 'der'
@@ -184,5 +322,12 @@ object MainForm: TMainForm
       '*)|*.*'
     Left = 316
     Top = 292
+  end
+  object dlgSaveMetadata: TSaveDialog
+    DefaultExt = 'xml'
+    Filter = 'XML File (*.xml)|*.xml'
+    Title = 'Save Metadata'
+    Left = 524
+    Top = 236
   end
 end

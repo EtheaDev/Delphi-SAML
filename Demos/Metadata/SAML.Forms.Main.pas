@@ -47,6 +47,24 @@ type
     btnSave: TButton;
     OpenDialog1: TOpenDialog;
     btnOpenFile: TButton;
+    tabWriter: TTabSheet;
+    Label2: TLabel;
+    edtEntityID: TEdit;
+    btnNew: TButton;
+    btnWriterSave: TButton;
+    dlgSaveMetadata: TSaveDialog;
+    Label3: TLabel;
+    edtLocation: TEdit;
+    edtProtocolBinding: TComboBox;
+    Label4: TLabel;
+    edtCacheDuration: TEdit;
+    Label5: TLabel;
+    Label6: TLabel;
+    edtValidUntil: TEdit;
+    Label7: TLabel;
+    edtCertificate: TEdit;
+    edtCerificateFormat: TComboBox;
+    Label8: TLabel;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnSaveClick(Sender: TObject);
@@ -58,8 +76,11 @@ type
     procedure FormResize(Sender: TObject);
     procedure edtMetatadataChange(Sender: TObject);
     procedure btnOpenFileClick(Sender: TObject);
+    procedure btnNewClick(Sender: TObject);
+    procedure btnWriterSaveClick(Sender: TObject);
   private
     FMetadata: TSAMLMetadata;
+    FNewMetadata: TSAMLMetadata;
     procedure LoadXML;
     procedure ParseXML(const AFileName: string);
     procedure ParseINI(const AFileName: string);
@@ -223,6 +244,14 @@ begin
   Key := #0;
 end;
 
+procedure TMainForm.btnNewClick(Sender: TObject);
+begin
+  if Assigned(FNewMetadata) then
+    FreeAndNil(FNewMetadata);
+
+  FNewMetadata := TSAMLMetadata.Create;
+end;
+
 procedure TMainForm.btnOpenFileClick(Sender: TObject);
 begin
   if OpenDialog1.Execute(Handle) then
@@ -246,6 +275,32 @@ begin
   end;
 end;
 
+procedure TMainForm.btnWriterSaveClick(Sender: TObject);
+begin
+  FNewMetadata.EntityID := edtEntityID.Text;
+  FNewMetadata.Location := edtLocation.Text;
+  FNewMetadata.ProtocolBinding := edtProtocolBinding.Text;
+  FNewMetadata.CacheDuration := edtCacheDuration.Text;
+  FNewMetadata.ValidUntil := Now + StrToIntDef(edtValidUntil.Text, 1) * 365;
+  FNewMetadata.Keys.Clear;
+
+  if edtCertificate.Text <> '' then
+  begin
+    if not FileExists(edtCertificate.Text) then
+      raise Exception.CreateFmt('File "%s" not found', [edtCertificate.Text]);
+
+    FNewMetadata.Keys.AddCertificate('signing',
+      TFileStream.Create(edtCertificate.Text, fmOpenRead),
+      TCertificateFormat(edtCerificateFormat.ItemIndex),
+      True);
+  end;
+
+  if dlgSaveMetadata.Execute(Handle) then
+  begin
+    TFile.WriteAllText(dlgSaveMetadata.FileName, FNewMetadata.AsXML);
+  end;
+end;
+
 procedure TMainForm.edtMetatadataChange(Sender: TObject);
 begin
   if edtMetatadata.ItemIndex >= 0 then
@@ -256,11 +311,13 @@ procedure TMainForm.FormCreate(Sender: TObject);
 begin
   pgcMain.ActivePageIndex := 0;
   LoadXML;
+  FNewMetadata := TSAMLMetadata.Create;
 end;
 
 procedure TMainForm.FormDestroy(Sender: TObject);
 begin
   FMetadata.Free;
+  FNewMetadata.Free;
 end;
 
 procedure TMainForm.FormResize(Sender: TObject);

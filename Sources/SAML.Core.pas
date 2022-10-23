@@ -39,7 +39,47 @@ type
 
 function Base64EncodeStr(const ABytes: TBytes): string;
 
+function PemToDer(APemCertificate: TBytes): TBytes;
+
 implementation
+
+uses
+  IdSSLOpenSSL, IdSSLOpenSSLHeaders;
+
+function PemToDer(APemCertificate: TBytes): TBytes;
+var
+  BIOBuffer: PBIO;
+  X509Certificate: PX509;
+  LDerCertificate: PByte;
+  LDerCertificateLen: Integer;
+begin
+  IdSSLOpenSSL.LoadOpenSSLLibrary;
+
+  BIOBuffer := BIO_new_mem_buf(@APemCertificate[0], Length(APemCertificate));
+  if not Assigned(BIOBuffer) then
+    raise ESAMLError.Create('Invalid certificate buffer');
+
+  try
+    X509Certificate := PEM_read_bio_X509(BIOBuffer, nil, nil, nil);
+    if not Assigned(X509Certificate) then
+      raise ESAMLError.Create('Invalid certificate');
+    try
+      LDerCertificate := nil;
+      LDerCertificateLen := i2d_X509(X509Certificate, @LDerCertificate);
+      if LDerCertificateLen > 0 then
+      begin
+        SetLength(Result, LDerCertificateLen);
+        Move(LDerCertificate^, Result[0], LDerCertificateLen);
+      end;
+
+    finally
+      X509_free(X509Certificate);
+    end;
+  finally
+    BIO_free(BIOBuffer);
+  end;
+end;
+
 
 function Base64EncodeStr(const ABytes: TBytes): string;
 const
