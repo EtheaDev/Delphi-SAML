@@ -20,4 +20,4 @@ The `-h` parameter is the hostname, the domain of the Service Provider and the `
 
 **To convert a PEM private key to a DER private key**
 
-  openssl rsa -inform pem -in PrivateKey.pem -outform der -out PrivateKey.der
+    openssl rsa -inform pem -in PrivateKey.pem -outform der -out PrivateKey.der
