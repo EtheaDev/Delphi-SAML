@@ -29,7 +29,9 @@ uses
   libxml2, libxmlsec;
 
 type
-  ESignError = class(Exception);
+  EXMLError = class(Exception);
+
+  ESAMLNotImplemented = class(EXMLError);
 
   {$SCOPEDENUMS ON}
   TKeyDataFormat = (
@@ -248,7 +250,7 @@ begin
   // Init xmlsec library */
   if xmlSecInit() < 0 then
   begin
-	  raise ESignError.Create('Error: xmlsec initialization failed');
+	  raise EXMLError.Create('Error: xmlsec initialization failed');
   end;
 
   // Check loaded library version */
@@ -264,19 +266,19 @@ begin
 
   if xmlSecCryptoDLLoadLibrary('openssl') < 0 then
   begin
-    raise ESignError.Create('Error: unable to load default xmlsec-crypto library');
+    raise EXMLError.Create('Error: unable to load default xmlsec-crypto library');
   end;
 
   // Init crypto library */
   if xmlSecCryptoAppInit(nil) < 0 then
   begin
-    raise ESignError.Create('Error: crypto initialization failed');
+    raise EXMLError.Create('Error: crypto initialization failed');
   end;
 
   // Init xmlsec-crypto library */
   if xmlSecCryptoInit() < 0  then
   begin
-    raise ESignError.Create('Error: xmlsec-crypto initialization failed');
+    raise EXMLError.Create('Error: xmlsec-crypto initialization failed');
   end;
 end;
 
@@ -368,7 +370,7 @@ begin
     end
     else if tmpAttr <> attr then
     begin
-      raise ESignError.CreateFmt('Error: duplicate ID attribute "%s"', [id]);
+      raise EXMLError.CreateFmt('Error: duplicate ID attribute "%s"', [id]);
     end;
   finally
     if id <> nil then
@@ -422,7 +424,7 @@ begin
   FStream.ReadBuffer(LBuffer[1], FStream.Size);
   FDocPtr := xmlParseMemory(PAnsiChar(LBuffer), FStream.Size);
   if (FDocPtr = nil) or (xmlDocGetRootElement(FDocPtr) = nil) then
-    raise ESignError.Create('Error: unable to parse XML');
+    raise EXMLError.Create('Error: unable to parse XML');
 end;
 
 procedure TXMLSecDocument.SaveToFile(const AFileName: string);
@@ -433,7 +435,7 @@ end;
 function TXMLSecDocument.FindNode(const ANodeName, ANodeNameSpace: string): IXMLSecNode;
 begin
   if not TryFindNode(ANodeName, ANodeNameSpace, Result) then
-    raise ESignError.Create('Error: start node not found XML');
+    raise EXMLError.Create('Error: start node not found XML');
 end;
 
 procedure TXMLSecDocument.SetRootElement(ANode: IXMLSecNode);
@@ -481,7 +483,7 @@ begin
   dsigCtx := xmlSecDSigCtxCreate(nil);
   if dsigCtx = nil then
   begin
-    raise ESignError.Create('Error: failed to create signature context');
+    raise EXMLError.Create('Error: failed to create signature context');
   end;
 end;
 
@@ -562,7 +564,7 @@ begin
     dsigCtx.signKey := xmlSecCryptoAppKeyLoadMemory(data, dataSize, xmlSecKeyDataFormat(AFormat), nil, nil, nil);
     if dsigCtx.signKey = nil then
     begin
-      raise ESignError.Create('Error: failed to load key');
+      raise EXMLError.Create('Error: failed to load key');
     end;
   finally
     FreeMem(data);
@@ -584,7 +586,7 @@ begin
   // sign the template */
   if xmlSecDSigCtxSign(dsigCtx, node) < 0 then
   begin
-    raise ESignError.Create('Error: signature failed');
+    raise EXMLError.Create('Error: signature failed');
   end;
 
 end;
@@ -598,7 +600,7 @@ begin
   (* Verify signature *)
   if xmlSecDSigCtxVerify(dsigCtx, node) < 0 then
   begin
-    raise ESignError.Create('Error: signature verify');
+    raise EXMLError.Create('Error: signature verify');
   end;
 
   (* print verification result to stdout *)
@@ -651,12 +653,12 @@ begin
 
   keysMngr := xmlSecKeysMngrCreate;
   if keysMngr = nil then
-    raise ESignError.Create('Error: failed to create keys manager');
+    raise EXMLError.Create('Error: failed to create keys manager');
   xmlSecCryptoAppDefaultKeysMngrInit(keysMngr);
 
   encCtx := xmlSecEncCtxCreate(keysMngr);
   if encCtx = nil then
-    raise ESignError.Create('Error: failed to create encryption context');
+    raise EXMLError.Create('Error: failed to create encryption context');
 
 end;
 
@@ -669,7 +671,7 @@ begin
   // decrypt the data */
   if (xmlSecEncCtxDecrypt(encCtx, node) < 0) or  (encCtx.result = nil) then
   begin
-    raise ESignError.Create('Error: decryption failed');
+    raise EXMLError.Create('Error: decryption failed');
   end;
 end;
 
@@ -690,7 +692,7 @@ end;
 
 procedure TEncryptionContext.Encrypt(AMLDocument: IXMLSecDocument);
 begin
-  raise ESignError.Create('Error: encryption not yet implemented');
+  raise ESAMLNotImplemented.Create('Error: encryption not yet implemented');
 end;
 
 procedure TEncryptionContext.LoadKey(AStream: TStream; AFormat: TKeyDataFormat;
@@ -715,12 +717,12 @@ begin
     key := xmlSecCryptoAppKeyLoadMemory(data, dataSize, xmlSecKeyDataFormat(AFormat), nil, nil, nil);
     if key = nil then
     begin
-      raise ESignError.Create('Error: failed to load key');
+      raise EXMLError.Create('Error: failed to load key');
     end;
 
     if xmlSecCryptoAppDefaultKeysMngrAdoptKey(keysMngr, key) < 0 then
     begin
-      raise ESignError.Create('Error: failed to add private key to keys manager');
+      raise EXMLError.Create('Error: failed to add private key to keys manager');
     end;
   finally
     FreeMem(data);
@@ -741,7 +743,7 @@ var
 begin
   ret := xmlLoadCatalog(PAnsiChar(AnsiString(AFileName)));
   if ret <> 0 then
-    raise ESignError.CreateFmt('Cannot load file "%s"', [AFileName]);
+    raise EXMLError.CreateFmt('Cannot load file "%s"', [AFileName]);
 end;
 
 { TXMLSchema }
