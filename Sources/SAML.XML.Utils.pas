@@ -25,7 +25,7 @@ unit SAML.XML.Utils;
 interface
 
 uses
-  System.Classes, System.SysUtils,
+  System.Classes, System.SysUtils, System.SyncObjs,
   libxml2, libxmlsec;
 
 type
@@ -73,15 +73,15 @@ type
     ['{14110BA5-ACEA-4F22-9D52-1A31E4327A96}']
     procedure LoadKey(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
     function DumpKey: string;
-    procedure Sign(AMLDocument: IXMLSecDocument);
-    function Verify(AMLDocument: IXMLSecDocument): Boolean;
+    procedure Sign(AXMLDocument: IXMLSecDocument);
+    function Verify(AXMLDocument: IXMLSecDocument): Boolean;
   end;
 
   IEncryptionContext = interface
     ['{F7BD8FA6-7626-440D-82A1-1D67DB735FFF}']
     procedure LoadKey(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
-    procedure Encrypt(AMLDocument: IXMLSecDocument);
-    procedure Decrypt(AMLDocument: IXMLSecDocument);
+    procedure Encrypt(AXMLDocument: IXMLSecDocument);
+    procedure Decrypt(AXMLDocument: IXMLSecDocument);
   end;
 
   IXMLSchemaValidContext = interface
@@ -97,9 +97,9 @@ type
   public
     { ISignatureContext }
     procedure LoadKey(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
-    procedure Sign(AMLDocument: IXMLSecDocument);
+    procedure Sign(AXMLDocument: IXMLSecDocument);
     function DumpKey: string;
-    function Verify(AMLDocument: IXMLSecDocument): Boolean;
+    function Verify(AXMLDocument: IXMLSecDocument): Boolean;
 
     constructor Create;
     destructor Destroy; override;
@@ -114,8 +114,8 @@ type
   public
     { IEncryptionContext }
     procedure LoadKey(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
-    procedure Encrypt(AMLDocument: IXMLSecDocument);
-    procedure Decrypt(AMLDocument: IXMLSecDocument);
+    procedure Encrypt(AXMLDocument: IXMLSecDocument);
+    procedure Decrypt(AXMLDocument: IXMLSecDocument);
 
     constructor Create;
     destructor Destroy; override;
@@ -193,6 +193,7 @@ uses
 
 var
   XmlCryptInitialized: Boolean = False;
+  XmlCryptInitLock: TCriticalSection;
 
 procedure LibXMLRaiseLastError(const AMessage: String = '');
 var
@@ -225,61 +226,69 @@ begin
   if XmlCryptInitialized then
     Exit;
 
+  XmlCryptInitLock.Acquire;
+  try
+    // Double check in case of concurent threads
+    if XmlCryptInitialized then
+      Exit;
+
+    {$IFDEF ENABLE_ERROR_CALLBACK}
+    xmlSetGenericErrorFunc(nil, ErrorCallback);
+    {$ENDIF}
+
+   // Init libxml and libxslt libraries */
+    xmlInitParser();
+  //  xmlLoadExtDtdDefaultValue := XML_DETECT_IDS or XML_COMPLETE_ATTRS;
+    xmlSubstituteEntitiesDefault(1);
+    {$IFDEF XMLSEC_NO_XSLT}
+      xmlIndentTreeOutput = 1;
+    {$ENDIF}
+
+      xsltSecPrefs := xsltNewSecurityPrefs();
+      xsltSetSecurityPrefs(xsltSecPrefs,  XSLT_SECPREF_READ_FILE,        xsltSecurityForbid);
+      xsltSetSecurityPrefs(xsltSecPrefs,  XSLT_SECPREF_WRITE_FILE,       xsltSecurityForbid);
+      xsltSetSecurityPrefs(xsltSecPrefs,  XSLT_SECPREF_CREATE_DIRECTORY, xsltSecurityForbid);
+      xsltSetSecurityPrefs(xsltSecPrefs,  XSLT_SECPREF_READ_NETWORK,     xsltSecurityForbid);
+      xsltSetSecurityPrefs(xsltSecPrefs,  XSLT_SECPREF_WRITE_NETWORK,    xsltSecurityForbid);
+      xsltSetDefaultSecurityPrefs(xsltSecPrefs);
+
+    // Init xmlsec library */
+    if xmlSecInit() < 0 then
+    begin
+      raise EXMLError.Create('Error: xmlsec initialization failed');
+    end;
+
+    // Check loaded library version */
+  //  if xmlSecCheckVersion() <> 1)
+  //  begin
+  //	  raise ESignError.Create('Error: loaded xmlsec library version is not compatible');
+  //  end;
+
+  //   Load default crypto engine if we are supporting dynamic
+  //   loading for xmlsec-crypto libraries. Use the crypto library
+  //   name ("openssl", "nss", etc.) to load corresponding
+  //   xmlsec-crypto library.
+
+    if xmlSecCryptoDLLoadLibrary('openssl') < 0 then
+    begin
+      raise EXMLError.Create('Error: unable to load default xmlsec-crypto library');
+    end;
+
+    // Init crypto library */
+    if xmlSecCryptoAppInit(nil) < 0 then
+    begin
+      raise EXMLError.Create('Error: crypto initialization failed');
+    end;
+
+    // Init xmlsec-crypto library */
+    if xmlSecCryptoInit() < 0  then
+    begin
+      raise EXMLError.Create('Error: xmlsec-crypto initialization failed');
+    end;
+  finally
+    XmlCryptInitLock.Release;
+  end;
   XmlCryptInitialized := True;
-
-  {$IFDEF ENABLE_ERROR_CALLBACK}
-  xmlSetGenericErrorFunc(nil, ErrorCallback);
-  {$ENDIF}
-
- // Init libxml and libxslt libraries */
-  xmlInitParser();
-//  xmlLoadExtDtdDefaultValue := XML_DETECT_IDS or XML_COMPLETE_ATTRS;
-  xmlSubstituteEntitiesDefault(1);
-  {$IFDEF XMLSEC_NO_XSLT}
-    xmlIndentTreeOutput = 1;
-  {$ENDIF}
-
-    xsltSecPrefs := xsltNewSecurityPrefs();
-    xsltSetSecurityPrefs(xsltSecPrefs,  XSLT_SECPREF_READ_FILE,        xsltSecurityForbid);
-    xsltSetSecurityPrefs(xsltSecPrefs,  XSLT_SECPREF_WRITE_FILE,       xsltSecurityForbid);
-    xsltSetSecurityPrefs(xsltSecPrefs,  XSLT_SECPREF_CREATE_DIRECTORY, xsltSecurityForbid);
-    xsltSetSecurityPrefs(xsltSecPrefs,  XSLT_SECPREF_READ_NETWORK,     xsltSecurityForbid);
-    xsltSetSecurityPrefs(xsltSecPrefs,  XSLT_SECPREF_WRITE_NETWORK,    xsltSecurityForbid);
-    xsltSetDefaultSecurityPrefs(xsltSecPrefs);
-
-  // Init xmlsec library */
-  if xmlSecInit() < 0 then
-  begin
-	  raise EXMLError.Create('Error: xmlsec initialization failed');
-  end;
-
-  // Check loaded library version */
-//  if xmlSecCheckVersion() <> 1)
-//  begin
-//	  raise ESignError.Create('Error: loaded xmlsec library version is not compatible');
-//  end;
-
-//   Load default crypto engine if we are supporting dynamic
-//   loading for xmlsec-crypto libraries. Use the crypto library
-//   name ("openssl", "nss", etc.) to load corresponding
-//   xmlsec-crypto library.
-
-  if xmlSecCryptoDLLoadLibrary('openssl') < 0 then
-  begin
-    raise EXMLError.Create('Error: unable to load default xmlsec-crypto library');
-  end;
-
-  // Init crypto library */
-  if xmlSecCryptoAppInit(nil) < 0 then
-  begin
-    raise EXMLError.Create('Error: crypto initialization failed');
-  end;
-
-  // Init xmlsec-crypto library */
-  if xmlSecCryptoInit() < 0  then
-  begin
-    raise EXMLError.Create('Error: xmlsec-crypto initialization failed');
-  end;
 end;
 
 procedure XmlCryptShutdown;
@@ -577,11 +586,11 @@ begin
 //  end;
 end;
 
-procedure TSignatureContext.Sign(AMLDocument: IXMLSecDocument);
+procedure TSignatureContext.Sign(AXMLDocument: IXMLSecDocument);
 var
   node: xmlNodePtr;
 begin
-  node := (AMLDocument.FindNode(string(xmlSecNodeSignature), string(xmlSecDSigNs)) as TXMLSecNode).FNode;
+  node := (AXMLDocument.FindNode(string(xmlSecNodeSignature), string(xmlSecDSigNs)) as TXMLSecNode).FNode;
 
   // sign the template */
   if xmlSecDSigCtxSign(dsigCtx, node) < 0 then
@@ -591,11 +600,11 @@ begin
 
 end;
 
-function TSignatureContext.Verify(AMLDocument: IXMLSecDocument): Boolean;
+function TSignatureContext.Verify(AXMLDocument: IXMLSecDocument): Boolean;
 var
   node: xmlNodePtr;
 begin
-  node := (AMLDocument.FindNode(string(xmlSecNodeSignature), string(xmlSecDSigNs)) as TXMLSecNode).FNode;
+  node := (AXMLDocument.FindNode(string(xmlSecNodeSignature), string(xmlSecDSigNs)) as TXMLSecNode).FNode;
 
   (* Verify signature *)
   if xmlSecDSigCtxVerify(dsigCtx, node) < 0 then
@@ -662,11 +671,11 @@ begin
 
 end;
 
-procedure TEncryptionContext.Decrypt(AMLDocument: IXMLSecDocument);
+procedure TEncryptionContext.Decrypt(AXMLDocument: IXMLSecDocument);
 var
   node: xmlNodePtr;
 begin
-  node := (AMLDocument.FindNode(string(xmlSecNodeEncryptedData), string(xmlSecEncNs)) as TXMLSecNode).FNode;
+  node := (AXMLDocument.FindNode(string(xmlSecNodeEncryptedData), string(xmlSecEncNs)) as TXMLSecNode).FNode;
 
   // decrypt the data */
   if (xmlSecEncCtxDecrypt(encCtx, node) < 0) or  (encCtx.result = nil) then
@@ -690,7 +699,7 @@ begin
   inherited;
 end;
 
-procedure TEncryptionContext.Encrypt(AMLDocument: IXMLSecDocument);
+procedure TEncryptionContext.Encrypt(AXMLDocument: IXMLSecDocument);
 begin
   raise ESAMLNotImplemented.Create('Error: encryption not yet implemented');
 end;
@@ -794,11 +803,13 @@ end;
 
 initialization
 
+XmlCryptInitLock := TCriticalSection.Create;
 XmlCryptInitialized := False;
 
 finalization
 
 XmlCryptShutdown;
+XmlCryptInitLock.Free;
 
 end.
 
