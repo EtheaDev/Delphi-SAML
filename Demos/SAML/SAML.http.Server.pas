@@ -95,6 +95,7 @@ var
   LSignatureContext: ISignatureContext;
 begin
   LXMLDocument := TXMLSecDocument.Create(TStringStream.Create(AXMLRequest, TEncoding.UTF8), True);
+  LXMLDocument.CheckSignatureTemplate;
   LXMLDocument.AddIDAttr('ID', 'AuthnRequest', 'urn:oasis:names:tc:SAML:2.0:protocol');
 
   LSignatureContext := TSignatureContext.Create;
@@ -104,24 +105,27 @@ begin
   Result := LXMLDocument.ToXML;
 end;
 
-function GetAuthnRequest(const AIssuer, AKeyFileName: string; AKeyDataFormat: TKeyDataFormat): string;
+function GetAuthnRequest(AIdPConfig: TSAMLIdPConfig; ASPConfig: TSAMLSPConfig): string;
 var
   LRequestXML: string;
   LSigned: Boolean;
 begin
-  LSigned := AKeyFileName <> '';
+  LSigned := ASPConfig.SignPrivKeyFile <> '';
 
   LRequestXML := TSAMLAuthnRequest.New
     .SetID('SAML_' + IntToStr(Random(1000000000)))
-    .SetIssuer(AIssuer)
+    .SetIssuer(ASPConfig.EntityId)
     .SetSigned(LSigned)
     .SetProtocolBinding(TSAML.BINDINGS_HTTP_POST)
+    .SetDestination(AIdPConfig.SSOUrl)
+    .SetAssertionConsumerServiceIndex(ASPConfig.AssertionConsumerServiceIndex)
+    .SetAttributeConsumingServiceIndex(ASPConfig.AttributeConsumingService)
     .AsXML;
 
   //TFile.WriteAllText('sp-authnrequest2.xml', LRequestXML);
 
   if LSigned then
-    Result := SignRequest(LRequestXML, AKeyFileName, AKeyDataFormat)
+    Result := SignRequest(LRequestXML, ASPConfig.SignPrivKeyFile, ASPConfig.SignPrivKeyFormat)
   else
     Result := LRequestXML;
 
@@ -139,16 +143,16 @@ begin
     .AsXML;
 end;
 
-function GetAuthnRequestUrl(const ASSOUrl, AIssuer, AKeyFileName: string; AKeyDataFormat: TKeyDataFormat): string;
+function GetAuthnRequestUrl(AIdPConfig: TSAMLIdPConfig; ASPConfig: TSAMLSPConfig): string;
 var
   AuthnRequest: string;
   CompressedRequest: string;
 begin
-  AuthnRequest := GetAuthnRequest(AIssuer, AKeyFileName, AKeyDataFormat);
+  AuthnRequest := GetAuthnRequest(AIdPConfig, ASPConfig);
 
   CompressedRequest := TSAMLAuthnRequest.RedirectEncode(AuthnRequest);
 
-  Result := ASSOUrl + '?SAMLRequest=' + TNetEncoding.URL.Encode(CompressedRequest);
+  Result := AIdPConfig.SSOUrl + '?SAMLRequest=' + TNetEncoding.URL.Encode(CompressedRequest);
 end;
 
 function GetLogoutRequestUrl(const ASLOUrl, AIssuer: string): string;
@@ -277,7 +281,7 @@ begin
 
   XML := TEncoding.UTF8.GetString(CompressedResponse);
   //TFile.WriteAllBytes('signed-response.xml', CompressedResponse);
-  if not FIdPConfig.SkipSignatureCheck then
+  if (not FIdPConfig.SkipSignatureCheck) and (FIdPConfig.SignPubKeyFile <> '') then
     ValidateAuthResponse(XML);
 
   if FSPConfig.EncPrivKeyFile <> '' then
@@ -337,12 +341,12 @@ begin
   if ARequestInfo.Params.Values['showdecoded'] <> '' then
   begin
     AResponseInfo.ContentType := 'application/xml';
-    AResponseInfo.ContentText := GetAuthnRequest(FSPConfig.EntityId, FSPConfig.SignPrivKeyFile, FSPConfig.SignPrivKeyFormat);
+    AResponseInfo.ContentText := GetAuthnRequest(FIdPConfig, FSPConfig);
   end
   else
   begin
     AResponseInfo.ContentType := 'text/plain';
-    AResponseInfo.ContentText := GetAuthnRequestUrl(FIdPConfig.SSOUrl, FSPConfig.EntityId, FSPConfig.SignPrivKeyFile, FSPConfig.SignPrivKeyFormat);
+    AResponseInfo.ContentText := GetAuthnRequestUrl(FIdPConfig, FSPConfig);
   end;
 end;
 

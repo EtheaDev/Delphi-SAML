@@ -56,6 +56,8 @@ type
     Label10: TLabel;
     Label11: TLabel;
     btnVerifyKeyEmb: TButton;
+    Label7: TLabel;
+    cmbRoot: TComboBox;
     procedure btnSignClick(Sender: TObject);
     procedure btnVerifyClick(Sender: TObject);
     procedure btnDecryptClick(Sender: TObject);
@@ -109,9 +111,17 @@ procedure TMainForm.btnSignClick(Sender: TObject);
 var
   LXMLDocument: IXMLSecDocument;
   LSignatureContext: ISignatureContext;
+  LRoot: TArray<string>;
+  LRootPair: string;
 begin
+  LRootPair := cmbRoot.Text;
+  LRoot := LRootPair.Split([',']);
+
   LXMLDocument := TXMLSecDocument.Create(TFileStream.Create(edtInputXMLName.Text, fmOpenRead), True);
-  LXMLDocument.AddIDAttr('ID', 'AuthnRequest', 'urn:oasis:names:tc:SAML:2.0:protocol');
+  LXMLDocument.CheckSignatureTemplate;
+  if Length(LRoot) = 2 then
+    LXMLDocument.AddIDAttr('ID', LRoot[0], LRoot[1]);
+  //LXMLDocument.AddIDAttr('ID', 'EntityDescriptor', 'urn:oasis:names:tc:SAML:2.0:metadata');
 
   LSignatureContext := TSignatureContext.Create;
   LSignatureContext.LoadKey(TFileStream.Create(edtPrivateKeyName.Text, fmOpenRead), TKeyDataFormat(edtPrivateKeyFormat.ItemIndex), True);

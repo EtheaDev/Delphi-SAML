@@ -75,6 +75,8 @@ type
     FEncPubKeyFormat: TKeyDataFormat;
     FEncPubKeyFile: string;
     FEncPrivKeyFormat: TKeyDataFormat;
+    FAssertionConsumerServiceIndex: string;
+    FAttributeConsumingService: string;
   public
     property EntityId: string read FEntityId write FEntityId;
 
@@ -82,6 +84,8 @@ type
     property AssertionUrl: string read FAssertionUrl write FAssertionUrl;
 
     property SignRequest: Boolean read FSignRequest write FSignRequest;
+    property AssertionConsumerServiceIndex: string read FAssertionConsumerServiceIndex write FAssertionConsumerServiceIndex;
+    property AttributeConsumingService: string read FAttributeConsumingService write FAttributeConsumingService;
     property SignPrivKeyFile: string read FSignPrivKeyFile write FSignPrivKeyFile;
     property SignPrivKeyFormat: TKeyDataFormat read FSignPrivKeyFormat write FSignPrivKeyFormat;
     property SignPubKeyFile: string read FSignPubKeyFile write FSignPubKeyFile;
@@ -171,6 +175,8 @@ begin
     HomeUrl := LConfig.Values['HomeUrl'];
     AssertionUrl := LConfig.Values['AssertionUrl'];
     SignRequest := LConfig.Values['SignRequest'] = '1';
+    AssertionConsumerServiceIndex := LConfig.Values['AssertionConsumerServiceIndex'];
+    AttributeConsumingService := LConfig.Values['AttributeConsumingService'];
 
     SignPrivKeyFile := LConfig.Values['SignPrivKeyFile'];
     SignPrivKeyFormat := StrToKeyFormat(LConfig.Values['SignPrivKeyFormat']);

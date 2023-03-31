@@ -30,6 +30,8 @@ uses
   System.ZLib, System.NetEncoding, Generics.Collections;
 
 type
+  TSAMLAuthnContext = (acPasswordProtected, acSpidL1, acSpidL2, acSpidL3);
+
   TSAMLAttribute = class(TObject)
   private
     FName: string;
@@ -53,6 +55,10 @@ type
     function SetIssuer(const AIssuer: string): ISAMLRequestBuilder;
     function SetProtocolBinding(const AProtocolBinding: string): ISAMLRequestBuilder;
     function SetSigned(ASigned: Boolean): ISAMLRequestBuilder;
+    function SetAuthnContext(AAuthnContext: TSAMLAuthnContext): ISAMLRequestBuilder;
+    function SetDestination(ADestination: string): ISAMLRequestBuilder;
+    function SetAssertionConsumerServiceIndex(AAssertionConsumerServiceIndex: string): ISAMLRequestBuilder;
+    function SetAttributeConsumingServiceIndex(AAttributeConsumingServiceIndex: string): ISAMLRequestBuilder;
     function Build: TSAMLAuthnRequest;
 
     function AsXML: string;
@@ -64,12 +70,20 @@ type
     FIssuer: string;
     FProtocolBinding: string;
     FSigned: Boolean;
+    FAuthnContext: TSAMLAuthnContext;
+    FDestination: string;
+    FAssertionConsumerServiceIndex: string;
+    FAttributeConsumingServiceIndex: string;
   public
     { ISAMLRequestBuilder }
     function SetID(const AID: string): ISAMLRequestBuilder;
     function SetIssuer(const AIssuer: string): ISAMLRequestBuilder;
     function SetProtocolBinding(const AProtocolBinding: string): ISAMLRequestBuilder;
     function SetSigned(ASigned: Boolean): ISAMLRequestBuilder;
+    function SetAuthnContext(AAuthnContext: TSAMLAuthnContext): ISAMLRequestBuilder;
+    function SetDestination(ADestination: string): ISAMLRequestBuilder;
+    function SetAssertionConsumerServiceIndex(AAssertionConsumerServiceIndex: string): ISAMLRequestBuilder;
+    function SetAttributeConsumingServiceIndex(AAttributeConsumingServiceIndex: string): ISAMLRequestBuilder;
 
     function AsXML: string;
     function Build: TSAMLAuthnRequest;
@@ -84,13 +98,21 @@ type
     FProtocolBinding: string;
     FIssuer: string;
     FSigned: Boolean;
-    procedure AddSignTemplate(Request: IXMLNode);
+    FAuthnContext: TSAMLAuthnContext;
+    FDestination: string;
+    FAttributeConsumingServiceIndex: string;
+    FAssertionConsumerServiceIndex: string;
+    function GetAuthnContextClassRefText: string;
   public
     constructor Create;
     property ID: string read FID;
     property Issuer: string read FIssuer;
+    property Destination: string read FDestination;
     property ProtocolBinding: string read FProtocolBinding;
     property Signed: Boolean read FSigned;
+    property AuthnContext: TSAMLAuthnContext read FAuthnContext;
+    property AssertionConsumerServiceIndex: string read FAssertionConsumerServiceIndex;
+    property AttributeConsumingServiceIndex: string read FAttributeConsumingServiceIndex;
     function AsXML: string;
   end;
 
@@ -162,7 +184,7 @@ type
 implementation
 
 uses
-  SAML.Core;
+  SAML.Core, SAML.XML.Utils;
 
 function SafeFindNode(AChildNodes: IXMLNodeList; const ANodeName, ANamespaceURI: string): IXMLNode;
 begin
@@ -302,49 +324,21 @@ end;
 
 { TSAMLRequest }
 
-procedure TSAMLAuthnRequest.AddSignTemplate(Request: IXMLNode);
-var
-  LSignature: IXMLNode;
-  LSignedInfo: IXMLNode;
-  LCanonicalizationMethod: IXMLNode;
-  LSignatureMethod: IXMLNode;
-  LReference: IXMLNode;
-  LTransforms: IXMLNode;
-  LTransform: IXMLNode;
-  LDigestMethod: IXMLNode;
-  LDigestValue: IXMLNode;
-  LSignatureValue: IXMLNode;
-  LKeyInfo: IXMLNode;
-  LKeyName: IXMLNode;
+function TSAMLAuthnRequest.GetAuthnContextClassRefText: string;
+const
+  PasswordProtectedTransport = 'urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport';
+  SpidL1 = 'https://www.spid.gov.it/SpidL1';
+  SpidL2 = 'https://www.spid.gov.it/SpidL2';
+  SpidL3 = 'https://www.spid.gov.it/SpidL3';
 begin
-  LSignature := Request.AddChild('Signature', 'http://www.w3.org/2000/09/xmldsig#');
-  LSignedInfo := LSignature.AddChild('SignedInfo', 'http://www.w3.org/2000/09/xmldsig#');
-
-  LCanonicalizationMethod := LSignedInfo.AddChild('CanonicalizationMethod', 'http://www.w3.org/2000/09/xmldsig#');
-  LCanonicalizationMethod.Attributes['Algorithm'] := 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315';
-
-  LSignatureMethod := LSignedInfo.AddChild('SignatureMethod', 'http://www.w3.org/2000/09/xmldsig#');
-  LSignatureMethod.Attributes['Algorithm'] := 'http://www.w3.org/2000/09/xmldsig#rsa-sha1';
-
-  LReference := LSignedInfo.AddChild('Reference', 'http://www.w3.org/2000/09/xmldsig#');
-  LReference.Attributes['URI'] := '';
-
-  LTransforms := LReference.AddChild('Transforms', 'http://www.w3.org/2000/09/xmldsig#');
-
-  LTransform := LTransforms.AddChild('Transform', 'http://www.w3.org/2000/09/xmldsig#');
-  LTransform.Attributes['Algorithm'] := 'http://www.w3.org/2000/09/xmldsig#enveloped-signature';
-
-  LDigestMethod := LReference.AddChild('DigestMethod', 'http://www.w3.org/2000/09/xmldsig#');
-  LDigestMethod.Attributes['Algorithm'] := 'http://www.w3.org/2000/09/xmldsig#sha1';
-
-  LDigestValue := LReference.AddChild('DigestValue', 'http://www.w3.org/2000/09/xmldsig#');
-
-  LSignatureValue := LSignature.AddChild('SignatureValue', 'http://www.w3.org/2000/09/xmldsig#');
-
-  LKeyInfo := LSignature.AddChild('KeyInfo', 'http://www.w3.org/2000/09/xmldsig#');
-
-  LKeyName := LKeyInfo.AddChild('KeyName', 'http://www.w3.org/2000/09/xmldsig#');
-
+  case FAuthnContext of
+    acPasswordProtected: Result := PasswordProtectedTransport;
+    acSpidL1: Result := SpidL1;
+    acSpidL2: Result := SpidL2;
+    acSpidL3: Result := SpidL3;
+  else
+    Result := PasswordProtectedTransport;
+  end;
 end;
 
 function TSAMLAuthnRequest.AsXML: string;
@@ -374,31 +368,30 @@ begin
   LRequest.Attributes['IssueInstant'] := DateToISO8601(Now, False);
   LRequest.Attributes['ProtocolBinding'] := FProtocolBinding;
   LRequest.Attributes['Version'] := '2.0';
-  LRequest.Attributes['Destination'] := 'https://samltest.id/idp/profile/SAML2/Redirect/SSO';
+  LRequest.Attributes['Destination'] := FDestination;
+
+  if FAssertionConsumerServiceIndex <> '' then
+    LRequest.Attributes['AssertionConsumerServiceIndex'] := FAssertionConsumerServiceIndex;
+  if FAttributeConsumingServiceIndex <> '' then
+  LRequest.Attributes['AttributeConsumingServiceIndex'] := FAttributeConsumingServiceIndex;
+//  LRequest.Attributes['AssertionConsumerServiceURL'] := 'https://spid.infocer.net/sire/rest/spid/login';
+//  LRequest.Attributes['ForceAuthn'] := 'true';
 
   LIssuerNode := LRequest.AddChild('saml:Issuer', 'urn:oasis:names:tc:SAML:2.0:assertion');
   LIssuerNode.Text := FIssuer;
 
-  if Signed then
-    AddSignTemplate(LRequest);
+//  if Signed then
+//    TXMLUtils.AddSignTemplate(LRequest);
 
   LNameIDPolicy := LRequest.AddChild('samlp:NameIDPolicy', 'urn:oasis:names:tc:SAML:2.0:protocol');
   LNameIDPolicy.Attributes['Format'] := NameIdFormat;
   LNameIDPolicy.Attributes['AllowCreate'] := 'true';
 
   LRequestedAuthnContext := LRequest.AddChild('samlp:RequestedAuthnContext', 'urn:oasis:names:tc:SAML:2.0:protocol');
-  LRequestedAuthnContext.Attributes['Comparison'] := 'exact';
+  LRequestedAuthnContext.Attributes['Comparison'] := 'minimum';
 
   LAuthnContextClassRef := LRequestedAuthnContext.AddChild('saml:AuthnContextClassRef', 'urn:oasis:names:tc:SAML:2.0:assertion');
-  LAuthnContextClassRef.Text := 'urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport';
-  (*
-
-  <samlp:NameIDPolicy Format="urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress" AllowCreate="true"/>
-  <samlp:RequestedAuthnContext Comparison="exact">
-    <saml:AuthnContextClassRef>urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport</saml:AuthnContextClassRef>
-  </samlp:RequestedAuthnContext>
-
-  *)
+  LAuthnContextClassRef.Text := GetAuthnContextClassRefText;
 
   Result := LDocument.XML.Text;
 end;
@@ -447,6 +440,10 @@ begin
     if FProtocolBinding <> '' then
       Result.FProtocolBinding := FProtocolBinding;
     Result.FSigned := FSigned;
+    Result.FAuthnContext := acSpidL2;
+    Result.FDestination := FDestination;
+    Result.FAssertionConsumerServiceIndex := FAssertionConsumerServiceIndex;
+    Result.FAttributeConsumingServiceIndex := FAttributeConsumingServiceIndex;
   except
     Result.Free;
     raise;
@@ -463,6 +460,34 @@ end;
 function TSAMLRequestBuilder.SetSigned(ASigned: Boolean): ISAMLRequestBuilder;
 begin
   FSigned := ASigned;
+  Result := Self;
+end;
+
+function TSAMLRequestBuilder.SetAssertionConsumerServiceIndex(
+  AAssertionConsumerServiceIndex: string): ISAMLRequestBuilder;
+begin
+  FAssertionConsumerServiceIndex := AAssertionConsumerServiceIndex;
+  Result := Self;
+end;
+
+function TSAMLRequestBuilder.SetAttributeConsumingServiceIndex(
+  AAttributeConsumingServiceIndex: string): ISAMLRequestBuilder;
+begin
+  FAttributeConsumingServiceIndex := AAttributeConsumingServiceIndex;
+  Result := Self;
+end;
+
+function TSAMLRequestBuilder.SetAuthnContext(
+  AAuthnContext: TSAMLAuthnContext): ISAMLRequestBuilder;
+begin
+  FAuthnContext := AAuthnContext;
+  Result := Self;
+end;
+
+function TSAMLRequestBuilder.SetDestination(
+  ADestination: string): ISAMLRequestBuilder;
+begin
+  FDestination := ADestination;
   Result := Self;
 end;
 

@@ -10,9 +10,11 @@ object MainForm: TMainForm
   Font.Height = -13
   Font.Name = 'Segoe UI'
   Font.Style = []
+  OldCreateOrder = True
   Position = poScreenCenter
   StyleElements = [seClient, seBorder]
   OnCreate = FormCreate
+  PixelsPerInch = 96
   TextHeight = 17
   object pgcConfig: TPageControl
     AlignWithMargins = True
@@ -154,6 +156,10 @@ object MainForm: TMainForm
     object tabServiceProvider: TTabSheet
       Caption = 'Service Provider'
       ImageIndex = 1
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object GroupBox2: TGroupBox
         AlignWithMargins = True
         Left = 3

@@ -2,7 +2,7 @@ object MainForm: TMainForm
   Left = 0
   Top = 0
   Caption = 'XmlSec DEMO'
-  ClientHeight = 547
+  ClientHeight = 573
   ClientWidth = 946
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -53,6 +53,13 @@ object MainForm: TMainForm
     Width = 44
     Height = 17
     Caption = 'Format:'
+  end
+  object Label7: TLabel
+    Left = 15
+    Top = 469
+    Width = 147
+    Height = 17
+    Caption = 'Root node (tagName,ns):'
   end
   object memInput: TMemo
     Left = 8
@@ -178,7 +185,7 @@ object MainForm: TMainForm
   end
   object boxFooter: TPanel
     Left = 0
-    Top = 502
+    Top = 528
     Width = 946
     Height = 45
     Align = alBottom
@@ -186,6 +193,8 @@ object MainForm: TMainForm
     Caption = 'boxFooter'
     ShowCaption = False
     TabOrder = 10
+    ExplicitTop = 498
+    ExplicitWidth = 944
     object btnSign: TButton
       AlignWithMargins = True
       Left = 3
@@ -259,6 +268,7 @@ object MainForm: TMainForm
     ParentFont = False
     ShowCaption = False
     TabOrder = 11
+    ExplicitWidth = 944
     object Label10: TLabel
       Left = 15
       Top = 16
@@ -285,5 +295,16 @@ object MainForm: TMainForm
       Font.Style = []
       ParentFont = False
     end
+  end
+  object cmbRoot: TComboBox
+    Left = 15
+    Top = 491
+    Width = 450
+    Height = 25
+    TabOrder = 12
+    Text = 'AuthnRequest,urn:oasis:names:tc:SAML:2.0:protocol'
+    Items.Strings = (
+      'AuthnRequest,urn:oasis:names:tc:SAML:2.0:protocol'
+      'EntityDescriptor,urn:oasis:names:tc:SAML:2.0:metadata')
   end
 end

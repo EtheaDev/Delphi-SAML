@@ -63,8 +63,10 @@ type
     ['{8C7E8120-AD30-4E7D-9725-0439625D9145}']
     function FindNode(const ANodeName, ANodeNameSpace: string): IXMLSecNode;
     function TryFindNode(const ANodeName, ANodeNameSpace: string; out ANode: IXMLSecNode): Boolean;
+    procedure CheckSignatureTemplate;
     procedure AddIDAttr(const AAttributeName, ANodeName, ANameSpace: string);
     procedure SetRootElement(ANode: IXMLSecNode);
+    procedure AddSignatureTemplate;
     function ToXML: string;
     procedure SaveToFile(const AFileName: string);
   end;
@@ -132,6 +134,8 @@ type
     function TryFindNode(const ANodeName, ANodeNameSpace: string; out ANode: IXMLSecNode): Boolean;
     procedure AddIDAttr(const AAttributeName, ANodeName, ANameSpace: string);
     procedure SetRootElement(ANode: IXMLSecNode);
+    procedure AddSignatureTemplate;
+    procedure CheckSignatureTemplate;
     function ToXML: string;
     procedure SaveToFile(const AFileName: string);
 
@@ -404,9 +408,60 @@ begin
   );
 end;
 
+procedure TXMLSecDocument.AddSignatureTemplate;
+var
+  signNode: xmlNodePtr;
+  refNode: xmlNodePtr;
+  keyInfoNode: xmlNodePtr;
+begin
+  // create signature template for RSA-SHA1 enveloped signature */
+  signNode := xmlSecTmplSignatureCreate(FDocPtr, xmlSecTransformExclC14NGetKlass(), xmlSecTransformRsaSha1GetKlass(), nil);
+  if signNode = nil then
+  begin
+    raise EXMLError.Create('Error: failed to create signature template');
+  end;
+
+  // add <dsig:Signature/> node to the doc
+  xmlAddChild(xmlDocGetRootElement(FDocPtr), signNode);
+
+  // add reference
+  refNode := xmlSecTmplSignatureAddReference(signNode, xmlSecTransformSha1GetKlass(), nil, nil, nil);
+  if refNode = nil then
+  begin
+    raise EXMLError.Create('Error: failed to add reference to signature template');
+  end;
+
+  // add enveloped transform
+  if xmlSecTmplReferenceAddTransform(refNode, xmlSecTransformEnvelopedGetKlass()) = nil then
+  begin
+    raise EXMLError.Create('Error: failed to add enveloped transform to reference');
+  end;
+
+  // add <dsig:KeyInfo/> and <dsig:KeyName/> nodes to put key name in the signed document
+  keyInfoNode := xmlSecTmplSignatureEnsureKeyInfo(signNode, nil);
+  if keyInfoNode = nil then
+  begin
+    raise EXMLError.Create('Error: failed to add key info');
+  end;
+
+  if xmlSecTmplKeyInfoAddKeyName(keyInfoNode, nil) = nil then
+  begin
+    raise EXMLError.Create('Error: failed to add key name');
+  end;
+end;
+
+procedure TXMLSecDocument.CheckSignatureTemplate;
+var
+  ANode: IXMLSecNode;
+begin
+  if not TryFindNode(string(xmlSecNodeSignature), string(xmlSecDSigNs), ANode) then
+    AddSignatureTemplate;
+end;
+
 constructor TXMLSecDocument.Create(AStream: TStream; AOwnsStream: Boolean);
 begin
   inherited Create;
+  XmlCryptInit;
   FStream := AStream;
   FOwnsStream := AOwnsStream;
   FDocPtr := nil;
@@ -592,7 +647,7 @@ var
 begin
   node := (AXMLDocument.FindNode(string(xmlSecNodeSignature), string(xmlSecDSigNs)) as TXMLSecNode).FNode;
 
-  // sign the template */
+  // sign the template
   if xmlSecDSigCtxSign(dsigCtx, node) < 0 then
   begin
     raise EXMLError.Create('Error: signature failed');
@@ -677,7 +732,7 @@ var
 begin
   node := (AXMLDocument.FindNode(string(xmlSecNodeEncryptedData), string(xmlSecEncNs)) as TXMLSecNode).FNode;
 
-  // decrypt the data */
+  // decrypt the data
   if (xmlSecEncCtxDecrypt(encCtx, node) < 0) or  (encCtx.result = nil) then
   begin
     raise EXMLError.Create('Error: decryption failed');
@@ -695,7 +750,6 @@ begin
   if FOwnsStream then
     FStream.Free;
 
-  //XmlCryptShutdown;
   inherited;
 end;
 

@@ -48,23 +48,27 @@ type
     OpenDialog1: TOpenDialog;
     btnOpenFile: TButton;
     tabWriter: TTabSheet;
-    Label2: TLabel;
-    edtEntityID: TEdit;
     btnNew: TButton;
     btnWriterSave: TButton;
     dlgSaveMetadata: TSaveDialog;
+    Label9: TLabel;
+    cmbIniFiles: TComboBox;
+    btnIniFile: TButton;
+    GroupBox1: TGroupBox;
+    Label2: TLabel;
     Label3: TLabel;
-    edtLocation: TEdit;
-    edtProtocolBinding: TComboBox;
     Label4: TLabel;
-    edtCacheDuration: TEdit;
     Label5: TLabel;
     Label6: TLabel;
-    edtValidUntil: TEdit;
     Label7: TLabel;
+    Label8: TLabel;
+    edtEntityID: TEdit;
+    edtLocation: TEdit;
+    edtProtocolBinding: TComboBox;
+    edtCacheDuration: TEdit;
+    edtValidUntil: TEdit;
     edtCertificate: TEdit;
     edtCerificateFormat: TComboBox;
-    Label8: TLabel;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnSaveClick(Sender: TObject);
@@ -78,12 +82,15 @@ type
     procedure btnOpenFileClick(Sender: TObject);
     procedure btnNewClick(Sender: TObject);
     procedure btnWriterSaveClick(Sender: TObject);
+    procedure cmbIniFilesChange(Sender: TObject);
   private
     FMetadata: TSAMLMetadata;
     FNewMetadata: TSAMLMetadata;
     procedure LoadXML;
+    procedure LoadIni;
     procedure ParseXML(const AFileName: string);
     procedure ParseINI(const AFileName: string);
+    procedure ParseEditINI(const AFileName: string);
     procedure ShowMetadata(AMetadata: TSAMLMetadata);
   public
     { Public declarations }
@@ -159,6 +166,35 @@ begin
   end;
 end;
 
+procedure TMainForm.ParseEditINI(const AFileName: string);
+var
+  LSPConfig: TSAMLSPConfig;
+begin
+  LSPConfig := TSAMLSPConfig.Create;
+  try
+    LSPConfig.LoadFromFile(AFileName);
+    edtEntityID.Text := LSPConfig.EntityId;
+//    FMetadata.AuthnRequestsSigned := LSPConfig.SignRequest;
+//    FMetadata.ConsumerService.Add(TSAML.BINDINGS_HTTP_POST, LSPConfig.AssertionUrl);
+//    FMetadata.ConsumerService.Add(TSAML.BINDINGS_HTTP_REDIRECT, LSPConfig.AssertionUrl);
+//
+//    if LSPConfig.SignPubKeyFormat <> TKeyDataFormat.Der then
+//      raise Exception.Create('The key must be in DER format');
+//    LKeyFileName := TPath.Combine(ExtractFileDir(AFileName), LSPConfig.SignPubKeyFile);
+//    LKeyData := TFile.ReadAllBytes(LKeyFileName);
+//    FMetadata.Keys.Add(TKeyDescriptor.Create('signing', LKeyData));
+//
+//    if LSPConfig.EncPubKeyFormat <> TKeyDataFormat.Der then
+//      raise Exception.Create('The key must be in DER format');
+//    LKeyFileName := TPath.Combine(ExtractFileDir(AFileName), LSPConfig.EncPubKeyFile);
+//    LKeyData := TFile.ReadAllBytes(LKeyFileName);
+//    FMetadata.Keys.Add(TKeyDescriptor.Create('encryption', LKeyData));
+  finally
+    LSPConfig.Free;
+  end;
+
+end;
+
 procedure TMainForm.ParseINI(const AFileName: string);
 var
   LSPConfig: TSAMLSPConfig;
@@ -226,6 +262,17 @@ begin
   grdValues.Cells[0, LRowIndex] := AKey;
   grdValues.Cells[1, LRowIndex] := AValue;
   grdValues.RowCount := grdValues.RowCount + 1;
+end;
+
+procedure TMainForm.LoadIni;
+var
+  LFiles: TStringDynArray;
+  LFileName: string;
+begin
+  cmbIniFiles.Items.Clear;
+  LFiles := TDirectory.GetFiles(ExtractFilePath(Application.ExeName), '*.ini');
+  for LFileName in LFiles do
+    cmbIniFiles.Items.Add(ExtractFileName(LFileName));
 end;
 
 procedure TMainForm.LoadXML;
@@ -301,6 +348,12 @@ begin
   end;
 end;
 
+procedure TMainForm.cmbIniFilesChange(Sender: TObject);
+begin
+  if cmbIniFiles.ItemIndex >= 0 then
+    ParseEditIni(cmbIniFiles.Text);
+end;
+
 procedure TMainForm.edtMetatadataChange(Sender: TObject);
 begin
   if edtMetatadata.ItemIndex >= 0 then
@@ -311,6 +364,7 @@ procedure TMainForm.FormCreate(Sender: TObject);
 begin
   pgcMain.ActivePageIndex := 0;
   LoadXML;
+  LoadIni;
   FNewMetadata := TSAMLMetadata.Create;
 end;
 
