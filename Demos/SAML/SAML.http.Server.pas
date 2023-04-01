@@ -120,6 +120,7 @@ begin
     .SetDestination(AIdPConfig.SSOUrl)
     .SetAssertionConsumerServiceIndex(ASPConfig.AssertionConsumerServiceIndex)
     .SetAttributeConsumingServiceIndex(ASPConfig.AttributeConsumingService)
+    .SetAuthnContext(ASPConfig.AuthnContext)
     .AsXML;
 
   //TFile.WriteAllText('sp-authnrequest2.xml', LRequestXML);

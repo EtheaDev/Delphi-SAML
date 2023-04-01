@@ -25,7 +25,6 @@ program SPDemo;
 uses
   Vcl.Forms,
   SAML.Form.Main in 'SAML.Form.Main.pas' {MainForm},
-  SAML.Core in '..\..\Sources\SAML.Core.pas',
   SAML.XML.Utils in '..\..\Sources\SAML.XML.Utils.pas',
   libexslt in '..\..\Sources\bindings\libexslt.pas',
   libxml2 in '..\..\Sources\bindings\libxml2.pas',
@@ -36,7 +35,8 @@ uses
   SAML.Config in '..\..\Sources\SAML.Config.pas',
   SAML.http.Server in 'SAML.http.Server.pas' {modHttpServer: TDataModule},
   SAML.Metadata in '..\..\Sources\SAML.Metadata.pas',
-  SAML.Request in '..\..\Sources\SAML.Request.pas';
+  SAML.Request in '..\..\Sources\SAML.Request.pas',
+  SAML.Core in '..\..\Sources\SAML.Core.pas';
 
 {$R *.res}
 

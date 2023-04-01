@@ -77,6 +77,7 @@ type
     FEncPrivKeyFormat: TKeyDataFormat;
     FAssertionConsumerServiceIndex: string;
     FAttributeConsumingService: string;
+    FAuthnContext: string;
   public
     property EntityId: string read FEntityId write FEntityId;
 
@@ -95,6 +96,7 @@ type
     property EncPrivKeyFormat: TKeyDataFormat read FEncPrivKeyFormat write FEncPrivKeyFormat;
     property EncPubKeyFile: string read FEncPubKeyFile write FEncPubKeyFile;
     property EncPubKeyFormat: TKeyDataFormat read FEncPubKeyFormat write FEncPubKeyFormat;
+    property AuthnContext: string read FAuthnContext write FAuthnContext;
 
     constructor Create;
     procedure LoadFromFile(const AFileName: string);
@@ -177,6 +179,7 @@ begin
     SignRequest := LConfig.Values['SignRequest'] = '1';
     AssertionConsumerServiceIndex := LConfig.Values['AssertionConsumerServiceIndex'];
     AttributeConsumingService := LConfig.Values['AttributeConsumingService'];
+    AuthnContext := LConfig.Values['AuthnContext'];
 
     SignPrivKeyFile := LConfig.Values['SignPrivKeyFile'];
     SignPrivKeyFormat := StrToKeyFormat(LConfig.Values['SignPrivKeyFormat']);

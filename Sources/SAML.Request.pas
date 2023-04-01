@@ -27,11 +27,9 @@ interface
 uses
   System.Classes, System.SysUtils, System.Variants, Xml.xmldom,
   Xml.XMLIntf, Xml.XMLDoc, System.DateUtils, System.IOUtils,
-  System.ZLib, System.NetEncoding, Generics.Collections;
+  System.ZLib, System.NetEncoding, Generics.Collections, SAML.Core;
 
 type
-  TSAMLAuthnContext = (acPasswordProtected, acSpidL1, acSpidL2, acSpidL3);
-
   TSAMLAttribute = class(TObject)
   private
     FName: string;
@@ -55,7 +53,7 @@ type
     function SetIssuer(const AIssuer: string): ISAMLRequestBuilder;
     function SetProtocolBinding(const AProtocolBinding: string): ISAMLRequestBuilder;
     function SetSigned(ASigned: Boolean): ISAMLRequestBuilder;
-    function SetAuthnContext(AAuthnContext: TSAMLAuthnContext): ISAMLRequestBuilder;
+    function SetAuthnContext(AAuthnContext: string): ISAMLRequestBuilder;
     function SetDestination(ADestination: string): ISAMLRequestBuilder;
     function SetAssertionConsumerServiceIndex(AAssertionConsumerServiceIndex: string): ISAMLRequestBuilder;
     function SetAttributeConsumingServiceIndex(AAttributeConsumingServiceIndex: string): ISAMLRequestBuilder;
@@ -70,7 +68,7 @@ type
     FIssuer: string;
     FProtocolBinding: string;
     FSigned: Boolean;
-    FAuthnContext: TSAMLAuthnContext;
+    FAuthnContext: string;
     FDestination: string;
     FAssertionConsumerServiceIndex: string;
     FAttributeConsumingServiceIndex: string;
@@ -80,7 +78,7 @@ type
     function SetIssuer(const AIssuer: string): ISAMLRequestBuilder;
     function SetProtocolBinding(const AProtocolBinding: string): ISAMLRequestBuilder;
     function SetSigned(ASigned: Boolean): ISAMLRequestBuilder;
-    function SetAuthnContext(AAuthnContext: TSAMLAuthnContext): ISAMLRequestBuilder;
+    function SetAuthnContext(AAuthnContext: string): ISAMLRequestBuilder;
     function SetDestination(ADestination: string): ISAMLRequestBuilder;
     function SetAssertionConsumerServiceIndex(AAssertionConsumerServiceIndex: string): ISAMLRequestBuilder;
     function SetAttributeConsumingServiceIndex(AAttributeConsumingServiceIndex: string): ISAMLRequestBuilder;
@@ -98,7 +96,7 @@ type
     FProtocolBinding: string;
     FIssuer: string;
     FSigned: Boolean;
-    FAuthnContext: TSAMLAuthnContext;
+    FAuthnContext: string;
     FDestination: string;
     FAttributeConsumingServiceIndex: string;
     FAssertionConsumerServiceIndex: string;
@@ -110,7 +108,7 @@ type
     property Destination: string read FDestination;
     property ProtocolBinding: string read FProtocolBinding;
     property Signed: Boolean read FSigned;
-    property AuthnContext: TSAMLAuthnContext read FAuthnContext;
+    property AuthnContext: string read FAuthnContext;
     property AssertionConsumerServiceIndex: string read FAssertionConsumerServiceIndex;
     property AttributeConsumingServiceIndex: string read FAttributeConsumingServiceIndex;
     function AsXML: string;
@@ -184,7 +182,7 @@ type
 implementation
 
 uses
-  SAML.Core, SAML.XML.Utils;
+  SAML.XML.Utils;
 
 function SafeFindNode(AChildNodes: IXMLNodeList; const ANodeName, ANamespaceURI: string): IXMLNode;
 begin
@@ -331,14 +329,10 @@ const
   SpidL2 = 'https://www.spid.gov.it/SpidL2';
   SpidL3 = 'https://www.spid.gov.it/SpidL3';
 begin
-  case FAuthnContext of
-    acPasswordProtected: Result := PasswordProtectedTransport;
-    acSpidL1: Result := SpidL1;
-    acSpidL2: Result := SpidL2;
-    acSpidL3: Result := SpidL3;
+  if FAuthnContext <> '' then
+    Result := FAuthnContext
   else
     Result := PasswordProtectedTransport;
-  end;
 end;
 
 function TSAMLAuthnRequest.AsXML: string;
@@ -440,7 +434,7 @@ begin
     if FProtocolBinding <> '' then
       Result.FProtocolBinding := FProtocolBinding;
     Result.FSigned := FSigned;
-    Result.FAuthnContext := acSpidL2;
+    Result.FAuthnContext := FAuthnContext;
     Result.FDestination := FDestination;
     Result.FAssertionConsumerServiceIndex := FAssertionConsumerServiceIndex;
     Result.FAttributeConsumingServiceIndex := FAttributeConsumingServiceIndex;
@@ -478,7 +472,7 @@ begin
 end;
 
 function TSAMLRequestBuilder.SetAuthnContext(
-  AAuthnContext: TSAMLAuthnContext): ISAMLRequestBuilder;
+  AAuthnContext: string): ISAMLRequestBuilder;
 begin
   FAuthnContext := AAuthnContext;
   Result := Self;
