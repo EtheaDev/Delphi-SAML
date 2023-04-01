@@ -54,8 +54,8 @@ type
     Label3: TLabel;
     Label7: TLabel;
     Label8: TLabel;
-    edtSPEntityID: TComboBox;
-    edtSPHomePage: TComboBox;
+    edtSPEntityID: TEdit;
+    edtSPHomePage: TEdit;
     edtSpSignPrivKey: TComboBox;
     edtSpSignPubKey: TComboBox;
     boxFooter: TPanel;
@@ -74,7 +74,7 @@ type
     Label13: TLabel;
     btnSPFromFile: TButton;
     edtSPPresets: TComboBox;
-    edtSPAssertionUrl: TComboBox;
+    edtSPAssertionUrl: TEdit;
     Label14: TLabel;
     Label15: TLabel;
     Label16: TLabel;
@@ -82,6 +82,9 @@ type
     edtSpEncPubKey: TComboBox;
     Label17: TLabel;
     edtPort: TEdit;
+    chkWantAuthnRequestsSigned: TCheckBox;
+    Label18: TLabel;
+    cmbAuthContext: TComboBox;
     procedure btnStartClick(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -89,12 +92,23 @@ type
     procedure btnIdPFromFileClick(Sender: TObject);
     procedure btnSPFromFileClick(Sender: TObject);
     procedure edtSPPresetsChange(Sender: TObject);
+    procedure edtSPEntityIDChange(Sender: TObject);
+    procedure edtSPHomePageChange(Sender: TObject);
+    procedure edtSPAssertionUrlChange(Sender: TObject);
+    procedure edtSpSignPrivKeyChange(Sender: TObject);
+    procedure edtSpSignPubKeyChange(Sender: TObject);
+    procedure edtSpEncPrivKeyChange(Sender: TObject);
+    procedure edtSpEncPubKeyChange(Sender: TObject);
+    procedure cmbAuthContextChange(Sender: TObject);
   private
     FHttpServer: TmodHttpServer;
     procedure LoadIdPPresets;
     procedure LoadSPPresets;
     procedure LoadIdPSetting(const AFileName: string);
     procedure LoadSPSetting(const AFileName: string);
+    procedure LoadCerts;
+    procedure AppendFileToCombo(AComboBox: TComboBox;
+      const ASearchPattern: string);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -142,6 +156,11 @@ begin
   FHttpServer.Start;
 end;
 
+procedure TMainForm.cmbAuthContextChange(Sender: TObject);
+begin
+  FHttpServer.SPConfig.AuthnContext := cmbAuthContext.Text;
+end;
+
 constructor TMainForm.Create(AOwner: TComponent);
 begin
   inherited;
@@ -159,9 +178,44 @@ begin
   LoadIdPSetting(TPath.Combine(ExtractFilePath(Application.ExeName), edtIdPPresets.Text));
 end;
 
+procedure TMainForm.edtSPAssertionUrlChange(Sender: TObject);
+begin
+  FHttpServer.SPConfig.AssertionUrl := edtSPAssertionUrl.Text;
+end;
+
+procedure TMainForm.edtSpEncPrivKeyChange(Sender: TObject);
+begin
+  FHttpServer.SPConfig.EncPrivKeyFile := edtSpEncPrivKey.Text;
+end;
+
+procedure TMainForm.edtSpEncPubKeyChange(Sender: TObject);
+begin
+  FHttpServer.SPConfig.EncPubKeyFile := edtSpEncPubKey.Text;
+end;
+
+procedure TMainForm.edtSPEntityIDChange(Sender: TObject);
+begin
+  FHttpServer.SPConfig.EntityId := edtSPEntityID.Text;
+end;
+
+procedure TMainForm.edtSPHomePageChange(Sender: TObject);
+begin
+  FHttpServer.SPConfig.HomeUrl := edtSPHomePage.Text;
+end;
+
 procedure TMainForm.edtSPPresetsChange(Sender: TObject);
 begin
   LoadSPSetting(TPath.Combine(ExtractFilePath(Application.ExeName), edtSPPresets.Text));
+end;
+
+procedure TMainForm.edtSpSignPrivKeyChange(Sender: TObject);
+begin
+  FHttpServer.SPConfig.SignPrivKeyFile := edtSpSignPrivKey.Text;
+end;
+
+procedure TMainForm.edtSpSignPubKeyChange(Sender: TObject);
+begin
+  FHttpServer.SPConfig.SignPubKeyFile := edtSpSignPubKey.Text;
 end;
 
 procedure TMainForm.FormCreate(Sender: TObject);
@@ -169,17 +223,43 @@ begin
   pgcConfig.ActivePageIndex := 0;
   LoadIdPPresets;
   LoadSPPresets;
+  LoadCerts;
 end;
 
-procedure TMainForm.LoadIdPPresets;
+procedure TMainForm.LoadCerts;
+begin
+  AppendFileToCombo(edtSpSignPrivKey, '*.pem');
+  AppendFileToCombo(edtSpSignPrivKey, '*.der');
+  AppendFileToCombo(edtSpSignPrivKey, '*.key');
+
+  AppendFileToCombo(edtSpEncPrivKey, '*.pem');
+  AppendFileToCombo(edtSpEncPrivKey, '*.der');
+  AppendFileToCombo(edtSpEncPrivKey, '*.key');
+
+  AppendFileToCombo(edtSpSignPubKey, '*.pem');
+  AppendFileToCombo(edtSpSignPubKey, '*.der');
+  AppendFileToCombo(edtSpSignPubKey, '*.crt');
+
+  AppendFileToCombo(edtSpEncPubKey, '*.pem');
+  AppendFileToCombo(edtSpEncPubKey, '*.der');
+  AppendFileToCombo(edtSpEncPubKey, '*.crt');
+end;
+
+procedure TMainForm.AppendFileToCombo(AComboBox: TComboBox; const ASearchPattern: string);
 var
   LFiles: TStringDynArray;
   LFileName: string;
 begin
-  edtIdPPresets.Items.Clear;
-  LFiles := TDirectory.GetFiles(ExtractFilePath(Application.ExeName), 'idp-*.ini');
+  LFiles := TDirectory.GetFiles(ExtractFilePath(Application.ExeName), ASearchPattern);
   for LFileName in LFiles do
-    edtIdPPresets.Items.Add(ExtractFileName(LFileName));
+    AComboBox.Items.Add(ExtractFileName(LFileName));
+end;
+
+
+procedure TMainForm.LoadIdPPresets;
+begin
+  AppendFileToCombo(edtIdPPresets, 'idp-*.ini');
+  AppendFileToCombo(edtIdPPresets, 'idp-*.xml');
 end;
 
 procedure TMainForm.LoadIdPSetting(const AFileName: string);
@@ -190,21 +270,18 @@ begin
   edtSLOUrl.Text := FHttpServer.IdPConfig.SLOUrl;
   edtIdPSignPubKey.Text := FHttpServer.IdPConfig.SignPubKeyFile;
   edtIdPEncPubKey.Text := FHttpServer.IdPConfig.EncPubKeyFile;
+  chkWantAuthnRequestsSigned.Checked := FHttpServer.IdPConfig.WantAuthnRequestsSigned;
+
+  if not FHttpServer.IdPConfig.SigningCertificate.IsEmpty then
+    edtIdpSignPubKey.Text := '<embedded>';
+  if not FHttpServer.IdPConfig.EncryptionCertificate.IsEmpty then
+    edtIdpEncPubKey.Text := '<embedded>';
 end;
 
 procedure TMainForm.LoadSPPresets;
-var
-{$if CompilerVersion > 32}
-  LFiles: TArray<string>;
-{$else}
-  LFiles: TStringDynArray;
-{$endif}
-  LFileName: string;
 begin
-  edtSPPresets.Items.Clear;
-  LFiles := TDirectory.GetFiles(ExtractFilePath(Application.ExeName), 'sp-*.ini');
-  for LFileName in LFiles do
-    edtSPPresets.Items.Add(ExtractFileName(LFileName));
+  AppendFileToCombo(edtSPPresets, 'sp-*.ini');
+  AppendFileToCombo(edtSPPresets, 'sp-*.xml');
 end;
 
 procedure TMainForm.LoadSPSetting(const AFileName: string);
@@ -217,6 +294,12 @@ begin
   edtSpSignPubKey.Text := FHttpServer.SPConfig.SignPubKeyFile;
   edtSpEncPrivKey.Text := FHttpServer.SPConfig.EncPrivKeyFile;
   edtSpEncPubKey.Text := FHttpServer.SPConfig.EncPubKeyFile;
+  cmbAuthContext.Text := FHttpServer.SPConfig.AuthnContext;
+
+  if not FHttpServer.SPConfig.SigningCertificate.IsEmpty then
+    edtSpSignPubKey.Text := '<embedded>';
+  if not FHttpServer.SPConfig.EncryptionCertificate.IsEmpty then
+    edtSpEncPubKey.Text := '<embedded>';
 end;
 
 initialization

@@ -2,7 +2,7 @@ object MainForm: TMainForm
   Left = 0
   Top = 0
   Caption = 'SAML - ServiceProvider'
-  ClientHeight = 644
+  ClientHeight = 736
   ClientWidth = 455
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -10,21 +10,21 @@ object MainForm: TMainForm
   Font.Height = -13
   Font.Name = 'Segoe UI'
   Font.Style = []
-  OldCreateOrder = True
   Position = poScreenCenter
   StyleElements = [seClient, seBorder]
   OnCreate = FormCreate
-  PixelsPerInch = 96
   TextHeight = 17
   object pgcConfig: TPageControl
     AlignWithMargins = True
     Left = 3
     Top = 69
     Width = 449
-    Height = 512
+    Height = 604
     ActivePage = tabIdP
     Align = alClient
     TabOrder = 0
+    ExplicitWidth = 447
+    ExplicitHeight = 600
     object tabIdP: TTabSheet
       Caption = 'Identity Provider'
       object grpIdPSettings: TGroupBox
@@ -32,7 +32,7 @@ object MainForm: TMainForm
         Left = 3
         Top = 93
         Width = 435
-        Height = 308
+        Height = 364
         Align = alTop
         Caption = 'IdP settings'
         TabOrder = 1
@@ -106,6 +106,14 @@ object MainForm: TMainForm
           Height = 25
           TabOrder = 4
         end
+        object chkWantAuthnRequestsSigned: TCheckBox
+          Left = 24
+          Top = 279
+          Width = 296
+          Height = 17
+          Caption = 'WantAuthnRequestsSigned'
+          TabOrder = 5
+        end
       end
       object grpIdPPresets: TGroupBox
         AlignWithMargins = True
@@ -140,35 +148,22 @@ object MainForm: TMainForm
           Style = csDropDownList
           TabOrder = 0
           OnChange = edtIdPPresetsChange
-          Items.Strings = (
-            'Unknown = 0'
-            'Binary = 1'
-            'Pem = 2'
-            'Der = 3'
-            'Pkcs8Pem = 4'
-            'Pkcs8Der = 5'
-            'Pkcs12 = 6'
-            'CertPem = 7'
-            'CertDer = 8')
         end
       end
     end
     object tabServiceProvider: TTabSheet
       Caption = 'Service Provider'
       ImageIndex = 1
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object GroupBox2: TGroupBox
         AlignWithMargins = True
         Left = 3
         Top = 93
         Width = 435
-        Height = 398
+        Height = 460
         Align = alTop
         Caption = 'Service provider'
         TabOrder = 0
+        ExplicitWidth = 433
         object Label2: TLabel
           Left = 16
           Top = 25
@@ -218,25 +213,28 @@ object MainForm: TMainForm
           Height = 17
           Caption = 'Enc PutKey:'
         end
-        object edtSPEntityID: TComboBox
+        object Label18: TLabel
+          Left = 16
+          Top = 387
+          Width = 80
+          Height = 17
+          Caption = 'AuthnContext:'
+        end
+        object edtSPEntityID: TEdit
           Left = 16
           Top = 46
           Width = 321
           Height = 25
           TabOrder = 0
-          Items.Strings = (
-            'urn:test.lucaminuti:sp'
-            'urn:msingh.samltools:sp')
+          OnChange = edtSPEntityIDChange
         end
-        object edtSPHomePage: TComboBox
+        object edtSPHomePage: TEdit
           Left = 16
           Top = 99
           Width = 321
           Height = 25
           TabOrder = 1
-          Items.Strings = (
-            'sp.lucaminuti.it'
-            'sp.samltools.com')
+          OnChange = edtSPHomePageChange
         end
         object edtSpSignPrivKey: TComboBox
           Left = 16
@@ -244,8 +242,7 @@ object MainForm: TMainForm
           Width = 321
           Height = 25
           TabOrder = 2
-          Items.Strings = (
-            'sp-cert.crt')
+          OnChange = edtSpSignPrivKeyChange
         end
         object edtSpSignPubKey: TComboBox
           Left = 16
@@ -253,27 +250,23 @@ object MainForm: TMainForm
           Width = 321
           Height = 25
           TabOrder = 3
-          Items.Strings = (
-            'sp-key.pem')
+          OnChange = edtSpSignPubKeyChange
         end
-        object edtSPAssertionUrl: TComboBox
+        object edtSPAssertionUrl: TEdit
           Left = 16
           Top = 155
           Width = 321
           Height = 25
           TabOrder = 4
-          Items.Strings = (
-            'sp.lucaminuti.it'
-            'sp.samltools.com')
+          OnChange = edtSPAssertionUrlChange
         end
         object edtSpEncPrivKey: TComboBox
           Left = 16
-          Top = 307
+          Top = 303
           Width = 321
           Height = 25
           TabOrder = 5
-          Items.Strings = (
-            'sp-cert.crt')
+          OnChange = edtSpEncPrivKeyChange
         end
         object edtSpEncPubKey: TComboBox
           Left = 16
@@ -281,8 +274,22 @@ object MainForm: TMainForm
           Width = 321
           Height = 25
           TabOrder = 6
+          OnChange = edtSpEncPubKeyChange
+        end
+        object cmbAuthContext: TComboBox
+          Left = 16
+          Top = 410
+          Width = 321
+          Height = 25
+          TabOrder = 7
+          OnChange = cmbAuthContextChange
           Items.Strings = (
-            'sp-key.pem')
+            
+              'urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTranspor' +
+              't'
+            'https://www.spid.gov.it/SpidL1'
+            'https://www.spid.gov.it/SpidL2'
+            'https://www.spid.gov.it/SpidL3')
         end
       end
       object grpSPPresets: TGroupBox
@@ -294,6 +301,7 @@ object MainForm: TMainForm
         Align = alTop
         Caption = 'Presets'
         TabOrder = 1
+        ExplicitWidth = 433
         object Label13: TLabel
           Left = 24
           Top = 26
@@ -318,23 +326,13 @@ object MainForm: TMainForm
           Style = csDropDownList
           TabOrder = 0
           OnChange = edtSPPresetsChange
-          Items.Strings = (
-            'Unknown = 0'
-            'Binary = 1'
-            'Pem = 2'
-            'Der = 3'
-            'Pkcs8Pem = 4'
-            'Pkcs8Der = 5'
-            'Pkcs12 = 6'
-            'CertPem = 7'
-            'CertDer = 8')
         end
       end
     end
   end
   object boxFooter: TPanel
     Left = 0
-    Top = 584
+    Top = 676
     Width = 455
     Height = 60
     Align = alBottom
@@ -342,6 +340,8 @@ object MainForm: TMainForm
     Caption = 'boxFooter'
     ShowCaption = False
     TabOrder = 1
+    ExplicitTop = 672
+    ExplicitWidth = 453
     object Label17: TLabel
       Left = 15
       Top = 3
@@ -393,6 +393,7 @@ object MainForm: TMainForm
     ParentFont = False
     ShowCaption = False
     TabOrder = 2
+    ExplicitWidth = 453
     object Label10: TLabel
       Left = 15
       Top = 16

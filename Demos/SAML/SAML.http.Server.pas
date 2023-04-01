@@ -25,7 +25,8 @@ unit SAML.http.Server;
 interface
 
 uses
-  System.SysUtils, System.Classes, Winapi.ActiveX, System.NetEncoding, System.IOUtils,
+  System.SysUtils, System.Classes, Winapi.ActiveX, System.JSON,
+  System.NetEncoding, System.IOUtils,
   Xml.xmldom, Xml.XMLIntf, Xml.XMLDoc, DateUtils,
   IdContext, IdCustomHTTPServer, IdGlobalProtocols,
   IdBaseComponent, IdComponent, IdCustomTCPServer, IdHTTPServer, SAML.Config;
@@ -74,7 +75,7 @@ uses
 
 {$R *.dfm}
 
-function DecryptXML(const AXML, AKeyFileName: string; AKeyDataFormat: TKeyDataFormat): string;
+function DecryptXML(const AXML: string; AKey: TSAMLKey): string;
 var
   LXMLDocument: IXMLSecDocument;
   LSignatureContext: IEncryptionContext;
@@ -83,23 +84,33 @@ begin
   LXMLDocument.AddIDAttr('Id', 'EncryptedKey', 'http://www.w3.org/2001/04/xmlenc#');
 
   LSignatureContext := TEncryptionContext.Create;
-  LSignatureContext.LoadKey(TFileStream.Create(AKeyFileName, fmOpenRead), AKeyDataFormat, True);
-  LSignatureContext.Decrypt(LXMLDocument);
+  if LSignatureContext.IsEncrypted(LXMLDocument) then
+  begin
+    if AKey.IsEmpty then
+      raise Exception.Create('No key found in configuration');
+    LSignatureContext.LoadKey(TBytesStream.Create(AKey.Data), AKey.Format, True);
+    LSignatureContext.Decrypt(LXMLDocument);
 
-  Result := LXMLDocument.ToXML;
+    Result := LXMLDocument.ToXML;
+  end
+  else
+    Result := AXML;
 end;
 
-function SignRequest(const AXMLRequest, AKeyFileName: string; AKeyDataFormat: TKeyDataFormat): string;
+function SignRequest(const AXMLRequest, AId: string; AKey: TSAMLKey; ACertificate: TSAMLCertificate): string;
 var
   LXMLDocument: IXMLSecDocument;
   LSignatureContext: ISignatureContext;
 begin
   LXMLDocument := TXMLSecDocument.Create(TStringStream.Create(AXMLRequest, TEncoding.UTF8), True);
-  LXMLDocument.CheckSignatureTemplate;
+  LXMLDocument.CheckSignatureTemplate(AId, [TTemplateOption.InjectCertificate]);
   LXMLDocument.AddIDAttr('ID', 'AuthnRequest', 'urn:oasis:names:tc:SAML:2.0:protocol');
 
   LSignatureContext := TSignatureContext.Create;
-  LSignatureContext.LoadKey(TFileStream.Create(AKeyFileName, fmOpenRead), AKeyDataFormat, True);
+  LSignatureContext.LoadKey(TBytesStream.Create(AKey.Data), AKey.Format, True);
+  if Assigned(ACertificate) then
+    LSignatureContext.LoadCeriticate(TBytesStream.Create(ACertificate.Data), ACertificate.Format, True);
+
   LSignatureContext.Sign(LXMLDocument);
 
   Result := LXMLDocument.ToXML;
@@ -109,27 +120,32 @@ function GetAuthnRequest(AIdPConfig: TSAMLIdPConfig; ASPConfig: TSAMLSPConfig): 
 var
   LRequestXML: string;
   LSigned: Boolean;
+  LId: string;
 begin
+  LId := GetGuid;
   LSigned := ASPConfig.SignPrivKeyFile <> '';
 
   LRequestXML := TSAMLAuthnRequest.New
-    .SetID('SAML_' + IntToStr(Random(1000000000)))
+    .SetID(LId)
     .SetIssuer(ASPConfig.EntityId)
     .SetSigned(LSigned)
-    .SetProtocolBinding(TSAML.BINDINGS_HTTP_POST)
+    .SetProtocolBinding(AIdPConfig.SSOBinding)
     .SetDestination(AIdPConfig.SSOUrl)
     .SetAssertionConsumerServiceIndex(ASPConfig.AssertionConsumerServiceIndex)
-    .SetAttributeConsumingServiceIndex(ASPConfig.AttributeConsumingService)
+    .SetAttributeConsumingServiceIndex(ASPConfig.AttributeConsumingServiceIndex)
+    .SetAssertionConsumerServiceUrl(ASPConfig.AssertionUrl)
+    .SetForceAuthn(True)
     .SetAuthnContext(ASPConfig.AuthnContext)
     .AsXML;
 
-  //TFile.WriteAllText('sp-authnrequest2.xml', LRequestXML);
+  //TFile.WriteAllText('sp-authnrequest.xml', LRequestXML);
 
   if LSigned then
-    Result := SignRequest(LRequestXML, ASPConfig.SignPrivKeyFile, ASPConfig.SignPrivKeyFormat)
+    Result := SignRequest(LRequestXML, LId, ASPConfig.SigningKey, ASPConfig.SigningCertificate)
   else
     Result := LRequestXML;
 
+  //TFile.WriteAllText('sp-signed-authnrequest.xml', Result);
 end;
 
 function GetLogoutRequest(const ASLOUrl, AIssuer: string): string;
@@ -137,11 +153,32 @@ const
   NameID_Test = 'AAdzZWNyZXQx2MBz+72EffcuUFEz3OMXkLO6V4xaSTgFBKUtpCxzHGUGoetH6geS08EXqTEm9QYebzZhI2OlKTk6DCQRpX9fTBFe54ANLYAVYOpMfCCVS/YkSHNARqW/Fxiq';
 begin
   Result := TSAMLLogoutRequest.New
-    .SetID('SAML_' + IntToStr(Random(1000000000)))
+    .SetID(GUIDToString(TGUID.NewGuid))
     .SetIssuer(AIssuer)
     .SetDestination(ASLOUrl)
     .SetNameID(NameID_Test)
     .AsXML;
+end;
+
+function GetAuthnRequestInfo(AIdPConfig: TSAMLIdPConfig; ASPConfig: TSAMLSPConfig; const Binding: string): string;
+var
+  LJsonResponse: TJSONObject;
+  LSAMLRequest: string;
+  LRelayState: string;
+begin
+  LSAMLRequest := GetAuthnRequest(AIdPConfig, ASPConfig);
+  LRelayState := ASPConfig.AssertionUrl + '#' + IntToStr(Random(MaxInt));
+
+  LJsonResponse := TJSONObject.Create;
+  try
+    LJsonResponse.AddPair('url', AIdPConfig.SSOUrl);
+    LJsonResponse.AddPair('request', Base64EncodeStr(TEncoding.UTF8.GetBytes(LSAMLRequest)));
+    LJsonResponse.AddPair('binding', AIdPConfig.SSOBinding);
+    LJsonResponse.AddPair('relayState', Base64EncodeStr(TEncoding.UTF8.GetBytes(LRelayState)));
+    Result := LJsonResponse.ToJSON;
+  finally
+    LJsonResponse.Free;
+  end;
 end;
 
 function GetAuthnRequestUrl(AIdPConfig: TSAMLIdPConfig; ASPConfig: TSAMLSPConfig): string;
@@ -276,17 +313,23 @@ var
   LAttrib: TSAMLAttribute;
   AttrbHTML: string;
   InfoHTML: string;
+  LValidationResult: string;
 begin
+  LValidationResult := 'OK';
   SAMLResponse := ARequestInfo.Params.Values['SAMLResponse'];
   CompressedResponse := TNetEncoding.Base64.DecodeStringToBytes(SAMLResponse);
 
   XML := TEncoding.UTF8.GetString(CompressedResponse);
-  //TFile.WriteAllBytes('signed-response.xml', CompressedResponse);
-  if (not FIdPConfig.SkipSignatureCheck) and (FIdPConfig.SignPubKeyFile <> '') then
-    ValidateAuthResponse(XML);
+  // TFile.WriteAllBytes('signed-response.xml', CompressedResponse);
+  try
+    if (not FIdPConfig.SkipSignatureCheck) and (not FIdPConfig.SigningCertificate.IsEmpty) then
+      ValidateAuthResponse(XML);
+  except
+    on E: Exception do
+      LValidationResult := E.Message;
+  end;
 
-  if FSPConfig.EncPrivKeyFile <> '' then
-    XML := DecryptXML(XML, FSPConfig.EncPrivKeyFile, FSPConfig.EncPrivKeyFormat);
+  XML := DecryptXML(XML, FSPConfig.EncryptionKey);
 
   AttrbHTML := '';
   LSAMLResponse := TSAMLResponse.Create(XML);
@@ -295,6 +338,7 @@ begin
       '<tr><td>Destination</td><td>' + LSAMLResponse.Destination + '</td></tr>' +
       '<tr><td>Issuer</td><td>' + LSAMLResponse.Issuer + '</td></tr>' +
       '<tr><td>NameID</td><td><b>' + LSAMLResponse.NameID + '</b></td></tr>' +
+      '<tr><td>Validation</td><td><b>' + LValidationResult + '</b></td></tr>' +
       '</table>';
 
     AttrbHTML := AttrbHTML + '<tr><th>Name</th><th>FriendlyName</th><th>Value</th></tr>';
@@ -339,7 +383,12 @@ end;
 
 procedure TmodHttpServer.HandleIssue(AContext: TIdContext; ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
 begin
-  if ARequestInfo.Params.Values['showdecoded'] <> '' then
+  if ARequestInfo.Params.Values['binding'] <> '' then
+  begin
+    AResponseInfo.ContentType := 'application/json';
+    AResponseInfo.ContentText := GetAuthnRequestInfo(FIdPConfig, FSPConfig, ARequestInfo.Params.Values['binding']);
+  end
+  else if ARequestInfo.Params.Values['showdecoded'] <> '' then
   begin
     AResponseInfo.ContentType := 'application/xml';
     AResponseInfo.ContentText := GetAuthnRequest(FIdPConfig, FSPConfig);
@@ -385,7 +434,7 @@ begin
     LSignatureContext.LoadKey(TBytesStream.Create(LKey), TKeyDataFormat.CertDer, True);
   end
   else
-    LSignatureContext.LoadKey(TFileStream.Create(FIdPConfig.SignPubKeyFile, fmOpenRead), FIdPConfig.SignPubKeyFormat, True);
+    LSignatureContext.LoadKey(TBytesStream.Create(FIdPConfig.SigningCertificate.Data), FIdPConfig.SigningCertificate.Format, True);
 
   LStatus := LSignatureContext.Verify(LXMLDocument);
 

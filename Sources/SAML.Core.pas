@@ -35,16 +35,30 @@ type
   const
     BINDINGS_HTTP_POST = 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST';
     BINDINGS_HTTP_REDIRECT = 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect';
+
+    AUTHCONTEXT_PasswordProtectedTransport = 'urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport';
+    AUTHCONTEXT_SpidL1 = 'https://www.spid.gov.it/SpidL1';
+    AUTHCONTEXT_SpidL2 = 'https://www.spid.gov.it/SpidL2';
+    AUTHCONTEXT_SpidL3 = 'https://www.spid.gov.it/SpidL3';
   end;
 
 function Base64EncodeStr(const ABytes: TBytes): string;
 
 function PemToDer(APemCertificate: TBytes): TBytes;
 
+function GetGuid: string;
+
 implementation
 
 uses
   IdSSLOpenSSL, IdSSLOpenSSLHeaders;
+
+function GetGuid: string;
+begin
+  Result := GUIDToString(TGUID.NewGuid);
+  Result := StringReplace(Result, '{', '', []);
+  Result := StringReplace(Result, '}', '', []);
+end;
 
 function PemToDer(APemCertificate: TBytes): TBytes;
 var

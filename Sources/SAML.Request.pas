@@ -57,6 +57,8 @@ type
     function SetDestination(ADestination: string): ISAMLRequestBuilder;
     function SetAssertionConsumerServiceIndex(AAssertionConsumerServiceIndex: string): ISAMLRequestBuilder;
     function SetAttributeConsumingServiceIndex(AAttributeConsumingServiceIndex: string): ISAMLRequestBuilder;
+    function SetAssertionConsumerServiceUrl(AAssertionConsumerServiceUrl: string): ISAMLRequestBuilder;
+    function SetForceAuthn(AForceAuthn: Boolean): ISAMLRequestBuilder;
     function Build: TSAMLAuthnRequest;
 
     function AsXML: string;
@@ -71,7 +73,9 @@ type
     FAuthnContext: string;
     FDestination: string;
     FAssertionConsumerServiceIndex: string;
+    FAssertionConsumerServiceUrl: string;
     FAttributeConsumingServiceIndex: string;
+    FForceAuthn: Boolean;
   public
     { ISAMLRequestBuilder }
     function SetID(const AID: string): ISAMLRequestBuilder;
@@ -82,6 +86,8 @@ type
     function SetDestination(ADestination: string): ISAMLRequestBuilder;
     function SetAssertionConsumerServiceIndex(AAssertionConsumerServiceIndex: string): ISAMLRequestBuilder;
     function SetAttributeConsumingServiceIndex(AAttributeConsumingServiceIndex: string): ISAMLRequestBuilder;
+    function SetAssertionConsumerServiceUrl(AAssertionConsumerServiceUrl: string): ISAMLRequestBuilder;
+    function SetForceAuthn(AForceAuthn: Boolean): ISAMLRequestBuilder;
 
     function AsXML: string;
     function Build: TSAMLAuthnRequest;
@@ -100,6 +106,11 @@ type
     FDestination: string;
     FAttributeConsumingServiceIndex: string;
     FAssertionConsumerServiceIndex: string;
+    FAssertionConsumerServiceUrl: string;
+    FForceAuthn: Boolean;
+    FNameIdFormat: string;
+    FComparison: string;
+    FAllowCreate: Boolean;
     function GetAuthnContextClassRefText: string;
   public
     constructor Create;
@@ -111,6 +122,11 @@ type
     property AuthnContext: string read FAuthnContext;
     property AssertionConsumerServiceIndex: string read FAssertionConsumerServiceIndex;
     property AttributeConsumingServiceIndex: string read FAttributeConsumingServiceIndex;
+    property AssertionConsumerServiceUrl: string read FAssertionConsumerServiceUrl;
+    property ForceAuthn: Boolean read FForceAuthn;
+    property NameIdFormat: string read FNameIdFormat;
+    property Comparison: string read FComparison;
+
     function AsXML: string;
   end;
 
@@ -323,21 +339,14 @@ end;
 { TSAMLRequest }
 
 function TSAMLAuthnRequest.GetAuthnContextClassRefText: string;
-const
-  PasswordProtectedTransport = 'urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport';
-  SpidL1 = 'https://www.spid.gov.it/SpidL1';
-  SpidL2 = 'https://www.spid.gov.it/SpidL2';
-  SpidL3 = 'https://www.spid.gov.it/SpidL3';
 begin
   if FAuthnContext <> '' then
     Result := FAuthnContext
   else
-    Result := PasswordProtectedTransport;
+    Result := TSAML.AUTHCONTEXT_PasswordProtectedTransport;
 end;
 
 function TSAMLAuthnRequest.AsXML: string;
-const
-  NameIdFormat = 'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress';
 var
   LDocument: IXMLDocument;
   LRequest: IXMLNode;
@@ -367,22 +376,27 @@ begin
   if FAssertionConsumerServiceIndex <> '' then
     LRequest.Attributes['AssertionConsumerServiceIndex'] := FAssertionConsumerServiceIndex;
   if FAttributeConsumingServiceIndex <> '' then
-  LRequest.Attributes['AttributeConsumingServiceIndex'] := FAttributeConsumingServiceIndex;
-//  LRequest.Attributes['AssertionConsumerServiceURL'] := 'https://spid.infocer.net/sire/rest/spid/login';
-//  LRequest.Attributes['ForceAuthn'] := 'true';
+    LRequest.Attributes['AttributeConsumingServiceIndex'] := FAttributeConsumingServiceIndex;
+  if FAssertionConsumerServiceUrl <> '' then
+    LRequest.Attributes['AssertionConsumerServiceURL'] := FAssertionConsumerServiceUrl;
+  if FForceAuthn then
+    LRequest.Attributes['ForceAuthn'] := 'true';
 
   LIssuerNode := LRequest.AddChild('saml:Issuer', 'urn:oasis:names:tc:SAML:2.0:assertion');
   LIssuerNode.Text := FIssuer;
+  LIssuerNode.Attributes['Format'] := 'urn:oasis:names:tc:SAML:2.0:nameid-format:entity';
+  LIssuerNode.Attributes['NameQualifier'] := FIssuer;
 
 //  if Signed then
 //    TXMLUtils.AddSignTemplate(LRequest);
 
   LNameIDPolicy := LRequest.AddChild('samlp:NameIDPolicy', 'urn:oasis:names:tc:SAML:2.0:protocol');
   LNameIDPolicy.Attributes['Format'] := NameIdFormat;
-  LNameIDPolicy.Attributes['AllowCreate'] := 'true';
+  if FAllowCreate then
+    LNameIDPolicy.Attributes['AllowCreate'] := 'true';
 
   LRequestedAuthnContext := LRequest.AddChild('samlp:RequestedAuthnContext', 'urn:oasis:names:tc:SAML:2.0:protocol');
-  LRequestedAuthnContext.Attributes['Comparison'] := 'minimum';
+  LRequestedAuthnContext.Attributes['Comparison'] := FComparison;
 
   LAuthnContextClassRef := LRequestedAuthnContext.AddChild('saml:AuthnContextClassRef', 'urn:oasis:names:tc:SAML:2.0:assertion');
   LAuthnContextClassRef.Text := GetAuthnContextClassRefText;
@@ -394,6 +408,9 @@ constructor TSAMLAuthnRequest.Create;
 begin
   inherited;
   FProtocolBinding := TSAML.BINDINGS_HTTP_POST;
+  //FNameIdFormat := 'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress';
+  FNameIdFormat := 'urn:oasis:names:tc:SAML:2.0:nameid-format:transient';
+  FComparison := 'minimum';
 end;
 
 class function TSAMLAuthnRequest.New: ISAMLRequestBuilder;
@@ -438,6 +455,8 @@ begin
     Result.FDestination := FDestination;
     Result.FAssertionConsumerServiceIndex := FAssertionConsumerServiceIndex;
     Result.FAttributeConsumingServiceIndex := FAttributeConsumingServiceIndex;
+    Result.FAssertionConsumerServiceUrl := FAssertionConsumerServiceUrl;
+    Result.FForceAuthn := FForceAuthn;
   except
     Result.Free;
     raise;
@@ -461,6 +480,20 @@ function TSAMLRequestBuilder.SetAssertionConsumerServiceIndex(
   AAssertionConsumerServiceIndex: string): ISAMLRequestBuilder;
 begin
   FAssertionConsumerServiceIndex := AAssertionConsumerServiceIndex;
+  Result := Self;
+end;
+
+function TSAMLRequestBuilder.SetForceAuthn(
+  AForceAuthn: Boolean): ISAMLRequestBuilder;
+begin
+  FForceAuthn := AForceAuthn;
+  Result := Self;
+end;
+
+function TSAMLRequestBuilder.SetAssertionConsumerServiceUrl(
+  AAssertionConsumerServiceUrl: string): ISAMLRequestBuilder;
+begin
+  FAssertionConsumerServiceUrl := AAssertionConsumerServiceUrl;
   Result := Self;
 end;
 

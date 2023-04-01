@@ -29,20 +29,33 @@
   <button id="sendb" class="button" style="color: #060; background-color: #85b4f5; font-variant: small-caps;" hidden>Send Request</button>
   </div>
   </p>
+  
+  <form id="pform" method="post" style="display: none">
+            <input name="SAMLRequest">
+            <input name="RelayState" value="">
+            <!--<input type="submit" value="Invia"/>-->
+        </form>
+  
+  
   <script>
 
+	const form = document.querySelector("#pform")
     const showb = document.querySelector("#showb")
     showb.addEventListener("click", function () {
     const txt = document.querySelector("#txt");
     txt.hidden = false;
     const sendb = document.querySelector("#sendb");
     sendb.hidden = false;
-      fetch('/issue?showdecoded=true')
+      fetch('/issue?binding=post')
         .then(response => response.text())
-        .then(data => {
+        .then(jsonResponse => {
+		  const response = JSON.parse(jsonResponse);
           const result = document.querySelector("#result");
-          result.innerHTML = data;
+          result.innerHTML = atob(response.request);
           result.hidden = false;
+		  form.elements.SAMLRequest.value = response.request;
+		  form.elements.RelayState.value = response.relayState;
+		  form.action = response.url;
           const sendRequestP = document.querySelector("#sendReq")
           sendRequestP.style.display = "block"
         })
@@ -55,12 +68,14 @@
 
     const sendAuthnReq = document.querySelector("#sendb")
     sendAuthnReq.addEventListener("click", function () {
+	  form.submit();
+	  /*
       fetch('/issue')
         .then(response => response.text())
         .then(data => {
           window.location.href=data
         });
-
+	  */
 
     })
   </script>

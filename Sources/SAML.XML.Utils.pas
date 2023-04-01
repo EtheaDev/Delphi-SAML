@@ -34,6 +34,8 @@ type
   ESAMLNotImplemented = class(EXMLError);
 
   {$SCOPEDENUMS ON}
+  TTemplateOption = (InjectCertificate);
+
   TKeyDataFormat = (
     Unknown = 0,
     Binary = 1,
@@ -45,8 +47,9 @@ type
     CertPem = 7,
     CertDer = 8
   );
-
   {$SCOPEDENUMS OFF}
+
+  TTemplateOptions = set of TTemplateOption;
 
   IXMLSecNode = interface
     ['{3E25268B-1BA8-4055-B5A6-CF8949F6E439}']
@@ -63,10 +66,9 @@ type
     ['{8C7E8120-AD30-4E7D-9725-0439625D9145}']
     function FindNode(const ANodeName, ANodeNameSpace: string): IXMLSecNode;
     function TryFindNode(const ANodeName, ANodeNameSpace: string; out ANode: IXMLSecNode): Boolean;
-    procedure CheckSignatureTemplate;
+    procedure CheckSignatureTemplate(const AId: string; AOptions: TTemplateOptions);
     procedure AddIDAttr(const AAttributeName, ANodeName, ANameSpace: string);
     procedure SetRootElement(ANode: IXMLSecNode);
-    procedure AddSignatureTemplate;
     function ToXML: string;
     procedure SaveToFile(const AFileName: string);
   end;
@@ -74,6 +76,7 @@ type
   ISignatureContext = interface
     ['{14110BA5-ACEA-4F22-9D52-1A31E4327A96}']
     procedure LoadKey(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
+    procedure LoadCeriticate(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
     function DumpKey: string;
     procedure Sign(AXMLDocument: IXMLSecDocument);
     function Verify(AXMLDocument: IXMLSecDocument): Boolean;
@@ -82,6 +85,7 @@ type
   IEncryptionContext = interface
     ['{F7BD8FA6-7626-440D-82A1-1D67DB735FFF}']
     procedure LoadKey(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
+    function IsEncrypted(AXMLDocument: IXMLSecDocument): Boolean;
     procedure Encrypt(AXMLDocument: IXMLSecDocument);
     procedure Decrypt(AXMLDocument: IXMLSecDocument);
   end;
@@ -99,6 +103,7 @@ type
   public
     { ISignatureContext }
     procedure LoadKey(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
+    procedure LoadCeriticate(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
     procedure Sign(AXMLDocument: IXMLSecDocument);
     function DumpKey: string;
     function Verify(AXMLDocument: IXMLSecDocument): Boolean;
@@ -116,6 +121,7 @@ type
   public
     { IEncryptionContext }
     procedure LoadKey(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
+    function IsEncrypted(AXMLDocument: IXMLSecDocument): Boolean;
     procedure Encrypt(AXMLDocument: IXMLSecDocument);
     procedure Decrypt(AXMLDocument: IXMLSecDocument);
 
@@ -134,8 +140,8 @@ type
     function TryFindNode(const ANodeName, ANodeNameSpace: string; out ANode: IXMLSecNode): Boolean;
     procedure AddIDAttr(const AAttributeName, ANodeName, ANameSpace: string);
     procedure SetRootElement(ANode: IXMLSecNode);
-    procedure AddSignatureTemplate;
-    procedure CheckSignatureTemplate;
+    procedure AddSignatureTemplate(const AId: string; AOptions: TTemplateOptions);
+    procedure CheckSignatureTemplate(const AId: string; AOptions: TTemplateOptions);
     function ToXML: string;
     procedure SaveToFile(const AFileName: string);
 
@@ -408,24 +414,35 @@ begin
   );
 end;
 
-procedure TXMLSecDocument.AddSignatureTemplate;
+procedure TXMLSecDocument.AddSignatureTemplate(const AId: string; AOptions: TTemplateOptions);
+const
+  SiblingNodeName = 'Issuer';
+  SiblingNodeNS = 'urn:oasis:names:tc:SAML:2.0:assertion';
 var
   signNode: xmlNodePtr;
   refNode: xmlNodePtr;
   keyInfoNode: xmlNodePtr;
+  X509DataNode: xmlNodePtr;
+  SiblingNode: xmlNodePtr;
+  ReferenceUri: AnsiString;
 begin
   // create signature template for RSA-SHA1 enveloped signature */
-  signNode := xmlSecTmplSignatureCreate(FDocPtr, xmlSecTransformExclC14NGetKlass(), xmlSecTransformRsaSha1GetKlass(), nil);
+  signNode := xmlSecTmplSignatureCreate(FDocPtr, xmlSecTransformExclC14NGetKlass(), xmlSecTransformRsaSha256GetKlass(), nil);
   if signNode = nil then
   begin
     raise EXMLError.Create('Error: failed to create signature template');
   end;
 
-  // add <dsig:Signature/> node to the doc
-  xmlAddChild(xmlDocGetRootElement(FDocPtr), signNode);
+  SiblingNode := xmlSecFindNode(xmlDocGetRootElement(FDocPtr), PAnsiChar(AnsiString(SiblingNodeName)), PAnsiChar(AnsiString(SiblingNodeNS)));
+  if SiblingNode = nil then
+    xmlAddChild(xmlDocGetRootElement(FDocPtr), signNode)
+  else
+    xmlAddNextSibling(SiblingNode, signNode);
+
+  ReferenceUri := AnsiString('#' + AId);
 
   // add reference
-  refNode := xmlSecTmplSignatureAddReference(signNode, xmlSecTransformSha1GetKlass(), nil, nil, nil);
+  refNode := xmlSecTmplSignatureAddReference(signNode, xmlSecTransformSha256GetKlass(), nil, PAnsiChar(ReferenceUri), nil);
   if refNode = nil then
   begin
     raise EXMLError.Create('Error: failed to add reference to signature template');
@@ -437,25 +454,41 @@ begin
     raise EXMLError.Create('Error: failed to add enveloped transform to reference');
   end;
 
-  // add <dsig:KeyInfo/> and <dsig:KeyName/> nodes to put key name in the signed document
-  keyInfoNode := xmlSecTmplSignatureEnsureKeyInfo(signNode, nil);
-  if keyInfoNode = nil then
+  if TTemplateOption.InjectCertificate in AOptions then
   begin
-    raise EXMLError.Create('Error: failed to add key info');
-  end;
+    // add <dsig:KeyInfo/> node to put key name in the signed document
+    keyInfoNode := xmlSecTmplSignatureEnsureKeyInfo(signNode, nil);
+    if keyInfoNode = nil then
+    begin
+      raise EXMLError.Create('Error: failed to add key info');
+    end;
 
-  if xmlSecTmplKeyInfoAddKeyName(keyInfoNode, nil) = nil then
-  begin
-    raise EXMLError.Create('Error: failed to add key name');
+    (*
+    if xmlSecTmplKeyInfoAddKeyName(keyInfoNode, nil) = nil then
+    begin
+      raise EXMLError.Create('Error: failed to add key name');
+    end;
+    *)
+
+    X509DataNode := xmlSecTmplKeyInfoAddX509Data(keyInfoNode);
+    if X509DataNode = nil then
+    begin
+      raise EXMLError.Create('Error: failed to add X509Data');
+    end;
+
+    if xmlSecTmplX509DataAddCertificate(X509DataNode) = nil then
+    begin
+      raise EXMLError.Create('Error: failed to add Certificate value');
+    end;
   end;
 end;
 
-procedure TXMLSecDocument.CheckSignatureTemplate;
+procedure TXMLSecDocument.CheckSignatureTemplate(const AId: string; AOptions: TTemplateOptions);
 var
   ANode: IXMLSecNode;
 begin
   if not TryFindNode(string(xmlSecNodeSignature), string(xmlSecDSigNs), ANode) then
-    AddSignatureTemplate;
+    AddSignatureTemplate(AId, AOptions);
 end;
 
 constructor TXMLSecDocument.Create(AStream: TStream; AOwnsStream: Boolean);
@@ -604,6 +637,33 @@ begin
   end;
 
 
+end;
+
+procedure TSignatureContext.LoadCeriticate(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
+var
+  data: xmlSecBytePtr;
+  dataSize: Cardinal;
+begin
+  Assert(AStream <> nil);
+  Assert(AStream.Size > 0);
+
+  FStream := AStream;
+  FOwnsStream := AOwnsStream;
+
+  dataSize := AStream.Size;
+  data := AllocMem(dataSize);
+  try
+    AStream.ReadBuffer(data^, dataSize);
+
+    // load certificate and add to the key
+    //dsigCtx.signKey := xmlSecCryptoAppKeyLoadMemory(data, dataSize, xmlSecKeyDataFormat(AFormat), nil, nil, nil);
+    if xmlSecCryptoAppKeyCertLoadMemory(dsigCtx.signKey, data, dataSize, xmlSecKeyDataFormat(AFormat)) < 0 then
+    begin
+      raise EXMLError.Create('Error: failed to load key');
+    end;
+  finally
+    FreeMem(data);
+  end;
 end;
 
 procedure TSignatureContext.LoadKey(AStream: TStream; AFormat: TKeyDataFormat;
@@ -756,6 +816,13 @@ end;
 procedure TEncryptionContext.Encrypt(AXMLDocument: IXMLSecDocument);
 begin
   raise ESAMLNotImplemented.Create('Error: encryption not yet implemented');
+end;
+
+function TEncryptionContext.IsEncrypted(AXMLDocument: IXMLSecDocument): Boolean;
+var
+  LNode: IXMLSecNode;
+begin
+  Result := AXMLDocument.TryFindNode(string(xmlSecNodeEncryptedData), string(xmlSecEncNs), LNode);
 end;
 
 procedure TEncryptionContext.LoadKey(AStream: TStream; AFormat: TKeyDataFormat;

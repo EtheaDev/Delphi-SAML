@@ -4,6 +4,7 @@
 
 https://docs.italia.it/italia/spid/spid-regole-tecniche/it/stabile/single-sign-on.html
 https://docs.italia.it/italia/spid/spid-regole-tecniche/it/stabile/metadata.html
+https://www.spid.gov.it/wp-content/uploads/2021/07/SPID_QAD.pdf
 
 ## Tools
 
