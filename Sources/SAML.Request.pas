@@ -51,9 +51,13 @@ type
     ['{5A245B70-2931-443D-804A-6F0505E190D7}']
     function SetID(const AID: string): ISAMLRequestBuilder;
     function SetIssuer(const AIssuer: string): ISAMLRequestBuilder;
+    function SetIssuerFormat(const AFormat: string): ISAMLRequestBuilder;
+    function SetIssuerNameQualifier(const ANameQualifier: string): ISAMLRequestBuilder;
     function SetProtocolBinding(const AProtocolBinding: string): ISAMLRequestBuilder;
     function SetSigned(ASigned: Boolean): ISAMLRequestBuilder;
-    function SetAuthnContext(AAuthnContext: string): ISAMLRequestBuilder;
+    function SetNameIdFormat(const ANameIdFormat: string): ISAMLRequestBuilder;
+    function SetComparison(const AComparison: string): ISAMLRequestBuilder;
+    function SetAuthnContextClassRef(AAuthnContextClassRef: string): ISAMLRequestBuilder;
     function SetDestination(ADestination: string): ISAMLRequestBuilder;
     function SetAssertionConsumerServiceIndex(AAssertionConsumerServiceIndex: string): ISAMLRequestBuilder;
     function SetAttributeConsumingServiceIndex(AAttributeConsumingServiceIndex: string): ISAMLRequestBuilder;
@@ -68,9 +72,13 @@ type
   public
     FID: string;
     FIssuer: string;
+    FIssuerFormat: string;
+    FIssuerNameQualifier: string;
     FProtocolBinding: string;
     FSigned: Boolean;
-    FAuthnContext: string;
+    FNameIdFormat: string;
+    FComparison: string;
+    FAuthnContextClassRef: string;
     FDestination: string;
     FAssertionConsumerServiceIndex: string;
     FAssertionConsumerServiceUrl: string;
@@ -80,9 +88,13 @@ type
     { ISAMLRequestBuilder }
     function SetID(const AID: string): ISAMLRequestBuilder;
     function SetIssuer(const AIssuer: string): ISAMLRequestBuilder;
+    function SetIssuerFormat(const AFormat: string): ISAMLRequestBuilder;
+    function SetIssuerNameQualifier(const ANameQualifier: string): ISAMLRequestBuilder;
     function SetProtocolBinding(const AProtocolBinding: string): ISAMLRequestBuilder;
     function SetSigned(ASigned: Boolean): ISAMLRequestBuilder;
-    function SetAuthnContext(AAuthnContext: string): ISAMLRequestBuilder;
+    function SetNameIdFormat(const ANameIdFormat: string): ISAMLRequestBuilder;
+    function SetComparison(const AComparison: string): ISAMLRequestBuilder;
+    function SetAuthnContextClassRef(AAuthnContextClassRef: string): ISAMLRequestBuilder;
     function SetDestination(ADestination: string): ISAMLRequestBuilder;
     function SetAssertionConsumerServiceIndex(AAssertionConsumerServiceIndex: string): ISAMLRequestBuilder;
     function SetAttributeConsumingServiceIndex(AAttributeConsumingServiceIndex: string): ISAMLRequestBuilder;
@@ -101,8 +113,10 @@ type
     FID: string;
     FProtocolBinding: string;
     FIssuer: string;
+    FIssuerFormat: string;
+    FIssuerNameQualifier: string;
     FSigned: Boolean;
-    FAuthnContext: string;
+    FAuthnContextClassRef: string;
     FDestination: string;
     FAttributeConsumingServiceIndex: string;
     FAssertionConsumerServiceIndex: string;
@@ -111,7 +125,6 @@ type
     FNameIdFormat: string;
     FComparison: string;
     FAllowCreate: Boolean;
-    function GetAuthnContextClassRefText: string;
   public
     constructor Create;
     property ID: string read FID;
@@ -119,7 +132,7 @@ type
     property Destination: string read FDestination;
     property ProtocolBinding: string read FProtocolBinding;
     property Signed: Boolean read FSigned;
-    property AuthnContext: string read FAuthnContext;
+    property AuthnContextClassRef: string read FAuthnContextClassRef;
     property AssertionConsumerServiceIndex: string read FAssertionConsumerServiceIndex;
     property AttributeConsumingServiceIndex: string read FAttributeConsumingServiceIndex;
     property AssertionConsumerServiceUrl: string read FAssertionConsumerServiceUrl;
@@ -338,14 +351,6 @@ end;
 
 { TSAMLRequest }
 
-function TSAMLAuthnRequest.GetAuthnContextClassRefText: string;
-begin
-  if FAuthnContext <> '' then
-    Result := FAuthnContext
-  else
-    Result := TSAML.AUTHCONTEXT_PasswordProtectedTransport;
-end;
-
 function TSAMLAuthnRequest.AsXML: string;
 var
   LDocument: IXMLDocument;
@@ -384,22 +389,32 @@ begin
 
   LIssuerNode := LRequest.AddChild('saml:Issuer', 'urn:oasis:names:tc:SAML:2.0:assertion');
   LIssuerNode.Text := FIssuer;
-  LIssuerNode.Attributes['Format'] := 'urn:oasis:names:tc:SAML:2.0:nameid-format:entity';
-  LIssuerNode.Attributes['NameQualifier'] := FIssuer;
 
-//  if Signed then
-//    TXMLUtils.AddSignTemplate(LRequest);
+  if FIssuerFormat <> '' then
+    LIssuerNode.Attributes['Format'] := FIssuerFormat;
+  if FIssuerNameQualifier <> '' then
+    LIssuerNode.Attributes['NameQualifier'] := FIssuerNameQualifier;
 
-  LNameIDPolicy := LRequest.AddChild('samlp:NameIDPolicy', 'urn:oasis:names:tc:SAML:2.0:protocol');
-  LNameIDPolicy.Attributes['Format'] := NameIdFormat;
-  if FAllowCreate then
-    LNameIDPolicy.Attributes['AllowCreate'] := 'true';
+  if NameIdFormat <> '' then
+  begin
+    LNameIDPolicy := LRequest.AddChild('samlp:NameIDPolicy', 'urn:oasis:names:tc:SAML:2.0:protocol');
+    LNameIDPolicy.Attributes['Format'] := NameIdFormat;
+    if FAllowCreate then
+      LNameIDPolicy.Attributes['AllowCreate'] := 'true';
+  end;
 
-  LRequestedAuthnContext := LRequest.AddChild('samlp:RequestedAuthnContext', 'urn:oasis:names:tc:SAML:2.0:protocol');
-  LRequestedAuthnContext.Attributes['Comparison'] := FComparison;
+  if (FComparison <> '') or (FAuthnContextClassRef <> '') then
+  begin
+    LRequestedAuthnContext := LRequest.AddChild('samlp:RequestedAuthnContext', 'urn:oasis:names:tc:SAML:2.0:protocol');
+    if FComparison <> '' then
+      LRequestedAuthnContext.Attributes['Comparison'] := FComparison;
 
-  LAuthnContextClassRef := LRequestedAuthnContext.AddChild('saml:AuthnContextClassRef', 'urn:oasis:names:tc:SAML:2.0:assertion');
-  LAuthnContextClassRef.Text := GetAuthnContextClassRefText;
+    if FAuthnContextClassRef <> '' then
+    begin
+      LAuthnContextClassRef := LRequestedAuthnContext.AddChild('saml:AuthnContextClassRef', 'urn:oasis:names:tc:SAML:2.0:assertion');
+      LAuthnContextClassRef.Text := FAuthnContextClassRef;
+    end;
+  end;
 
   Result := LDocument.XML.Text;
 end;
@@ -408,9 +423,6 @@ constructor TSAMLAuthnRequest.Create;
 begin
   inherited;
   FProtocolBinding := TSAML.BINDINGS_HTTP_POST;
-  //FNameIdFormat := 'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress';
-  FNameIdFormat := 'urn:oasis:names:tc:SAML:2.0:nameid-format:transient';
-  FComparison := 'minimum';
 end;
 
 class function TSAMLAuthnRequest.New: ISAMLRequestBuilder;
@@ -450,8 +462,13 @@ begin
       Result.FIssuer := FIssuer;
     if FProtocolBinding <> '' then
       Result.FProtocolBinding := FProtocolBinding;
+    Result.FIssuerFormat := FIssuerFormat;
+    Result.FIssuerNameQualifier := FIssuerNameQualifier;
     Result.FSigned := FSigned;
-    Result.FAuthnContext := FAuthnContext;
+    Result.FNameIdFormat := FNameIdFormat;
+    Result.FComparison := FComparison;
+    Result.FSigned := FSigned;
+    Result.FAuthnContextClassRef := FAuthnContextClassRef;
     Result.FDestination := FDestination;
     Result.FAssertionConsumerServiceIndex := FAssertionConsumerServiceIndex;
     Result.FAttributeConsumingServiceIndex := FAttributeConsumingServiceIndex;
@@ -504,10 +521,16 @@ begin
   Result := Self;
 end;
 
-function TSAMLRequestBuilder.SetAuthnContext(
-  AAuthnContext: string): ISAMLRequestBuilder;
+function TSAMLRequestBuilder.SetAuthnContextClassRef(AAuthnContextClassRef: string): ISAMLRequestBuilder;
 begin
-  FAuthnContext := AAuthnContext;
+  FAuthnContextClassRef := AAuthnContextClassRef;
+  Result := Self;
+end;
+
+function TSAMLRequestBuilder.SetComparison(
+  const AComparison: string): ISAMLRequestBuilder;
+begin
+  FComparison := AComparison;
   Result := Self;
 end;
 
@@ -528,6 +551,27 @@ function TSAMLRequestBuilder.SetIssuer(
   const AIssuer: string): ISAMLRequestBuilder;
 begin
   FIssuer := AIssuer;
+  Result := Self;
+end;
+
+function TSAMLRequestBuilder.SetIssuerFormat(
+  const AFormat: string): ISAMLRequestBuilder;
+begin
+  FIssuerFormat := AFormat;
+  Result := Self;
+end;
+
+function TSAMLRequestBuilder.SetIssuerNameQualifier(
+  const ANameQualifier: string): ISAMLRequestBuilder;
+begin
+  FIssuerNameQualifier := ANameQualifier;
+  Result := Self;
+end;
+
+function TSAMLRequestBuilder.SetNameIdFormat(
+  const ANameIdFormat: string): ISAMLRequestBuilder;
+begin
+  FNameIdFormat := ANameIdFormat;
   Result := Self;
 end;
 

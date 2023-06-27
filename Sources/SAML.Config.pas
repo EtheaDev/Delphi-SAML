@@ -116,11 +116,15 @@ type
     FEncPrivKeyFormat: TKeyDataFormat;
     FAssertionConsumerServiceIndex: string;
     FAttributeConsumingServiceIndex: string;
-    FAuthnContext: string;
+    FAuthnContextClassRef: string;
     FSigningCertificate: TSAMLCertificate;
     FEncryptionCertificate: TSAMLCertificate;
     FEncryptionKey: TSAMLKey;
     FSigningKey: TSAMLKey;
+    FIssuerFormat: string;
+    FIssuerNameQualifier: string;
+    FNameIdFormat: string;
+    FComparison: string;
     procedure LoadFromIniFile(const AFileName: string);
     procedure LoadFromXmlFile(const AFileName: string);
     procedure SetSignPrivKeyFile(const Value: string);
@@ -130,8 +134,14 @@ type
   public
     property EntityId: string read FEntityId write FEntityId;
 
+    property IssuerFormat: string read FIssuerFormat write FIssuerFormat;
+    property IssuerNameQualifier: string read FIssuerNameQualifier write FIssuerNameQualifier;
+
     property HomeUrl: string read FHomeUrl write FHomeUrl;
     property AssertionUrl: string read FAssertionUrl write FAssertionUrl;
+
+    property NameIdFormat: string read FNameIdFormat write FNameIdFormat;
+    property Comparison: string read FComparison write FComparison;
 
     property SigningCertificate: TSAMLCertificate read FSigningCertificate;
     property EncryptionCertificate: TSAMLCertificate read FEncryptionCertificate;
@@ -152,7 +162,7 @@ type
     property EncPrivKeyFormat: TKeyDataFormat read FEncPrivKeyFormat write FEncPrivKeyFormat;
     property EncPubKeyFile: string read FEncPubKeyFile write SetEncPubKeyFile;
     property EncPubKeyFormat: TKeyDataFormat read FEncPubKeyFormat write FEncPubKeyFormat;
-    property AuthnContext: string read FAuthnContext write FAuthnContext;
+    property AuthnContextClassRef: string read FAuthnContextClassRef write FAuthnContextClassRef;
 
     constructor Create;
     destructor Destroy; override;
@@ -333,7 +343,7 @@ begin
   FEncPrivKeyFormat := TKeyDataFormat.Unknown;
   FAssertionConsumerServiceIndex := '';
   FAttributeConsumingServiceIndex := '';
-  FAuthnContext := '';
+  FAuthnContextClassRef := '';
   FSigningCertificate.Clear;
   FEncryptionCertificate.Clear;
   FEncryptionKey.Clear;
@@ -347,6 +357,11 @@ begin
 
   FSigningKey := TSAMLKey.Create;
   FEncryptionKey := TSAMLKey.Create;
+
+  //FIssuerFormat := 'urn:oasis:names:tc:SAML:2.0:nameid-format:entity';
+  //FNameIdFormat := 'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress';
+  //FNameIdFormat := 'urn:oasis:names:tc:SAML:2.0:nameid-format:transient';
+  //FComparison := 'minimum';
 end;
 
 procedure TSAMLSPConfig.LoadFromXmlFile(const AFileName: string);
@@ -407,7 +422,7 @@ begin
 
   // Guess auth context
   if AFileName.ToUpper.Contains('SPID') then
-    AuthnContext := TSAML.AUTHCONTEXT_SpidL1;
+    FAuthnContextClassRef := TSAML.AUTHCONTEXT_SpidL1;
 
 end;
 
@@ -495,7 +510,12 @@ begin
     SignRequest := LConfig.Values['SignRequest'] = '1';
     AssertionConsumerServiceIndex := LConfig.Values['AssertionConsumerServiceIndex'];
     AttributeConsumingServiceIndex := LConfig.Values['AttributeConsumingServiceIndex'];
-    AuthnContext := LConfig.Values['AuthnContext'];
+    FAuthnContextClassRef := LConfig.Values['AuthnContextClassRef'];
+
+    FIssuerFormat := LConfig.Values['IssuerFormat'];
+    FIssuerNameQualifier := LConfig.Values['IssuerNameQualifier'];
+    FNameIdFormat := LConfig.Values['NameIdFormat'];
+    FComparison := LConfig.Values['Comparison'];
 
     SignPrivKeyFile := LConfig.Values['SignPrivKeyFile'];
     SignPrivKeyFormat := StrToKeyFormat(LConfig.Values['SignPrivKeyFormat']);

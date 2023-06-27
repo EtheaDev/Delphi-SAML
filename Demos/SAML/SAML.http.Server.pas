@@ -129,13 +129,15 @@ begin
     .SetID(LId)
     .SetIssuer(ASPConfig.EntityId)
     .SetSigned(LSigned)
+    .SetNameIdFormat(ASPConfig.NameIdFormat)
+    .SetComparison(ASPConfig.Comparison)
     .SetProtocolBinding(AIdPConfig.SSOBinding)
     .SetDestination(AIdPConfig.SSOUrl)
     .SetAssertionConsumerServiceIndex(ASPConfig.AssertionConsumerServiceIndex)
     .SetAttributeConsumingServiceIndex(ASPConfig.AttributeConsumingServiceIndex)
     .SetAssertionConsumerServiceUrl(ASPConfig.AssertionUrl)
     .SetForceAuthn(True)
-    .SetAuthnContext(ASPConfig.AuthnContext)
+    .SetAuthnContextClassRef(ASPConfig.AuthnContextClassRef)
     .AsXML;
 
   //TFile.WriteAllText('sp-authnrequest.xml', LRequestXML);

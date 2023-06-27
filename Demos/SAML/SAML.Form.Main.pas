@@ -158,7 +158,7 @@ end;
 
 procedure TMainForm.cmbAuthContextChange(Sender: TObject);
 begin
-  FHttpServer.SPConfig.AuthnContext := cmbAuthContext.Text;
+  FHttpServer.SPConfig.AuthnContextClassRef := cmbAuthContext.Text;
 end;
 
 constructor TMainForm.Create(AOwner: TComponent);
@@ -294,7 +294,7 @@ begin
   edtSpSignPubKey.Text := FHttpServer.SPConfig.SignPubKeyFile;
   edtSpEncPrivKey.Text := FHttpServer.SPConfig.EncPrivKeyFile;
   edtSpEncPubKey.Text := FHttpServer.SPConfig.EncPubKeyFile;
-  cmbAuthContext.Text := FHttpServer.SPConfig.AuthnContext;
+  cmbAuthContext.Text := FHttpServer.SPConfig.AuthnContextClassRef;
 
   if not FHttpServer.SPConfig.SigningCertificate.IsEmpty then
     edtSpSignPubKey.Text := '<embedded>';

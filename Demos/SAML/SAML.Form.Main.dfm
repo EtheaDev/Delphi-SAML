@@ -23,8 +23,6 @@ object MainForm: TMainForm
     ActivePage = tabIdP
     Align = alClient
     TabOrder = 0
-    ExplicitWidth = 447
-    ExplicitHeight = 600
     object tabIdP: TTabSheet
       Caption = 'Identity Provider'
       object grpIdPSettings: TGroupBox
@@ -163,7 +161,6 @@ object MainForm: TMainForm
         Align = alTop
         Caption = 'Service provider'
         TabOrder = 0
-        ExplicitWidth = 433
         object Label2: TLabel
           Left = 16
           Top = 25
@@ -301,7 +298,6 @@ object MainForm: TMainForm
         Align = alTop
         Caption = 'Presets'
         TabOrder = 1
-        ExplicitWidth = 433
         object Label13: TLabel
           Left = 24
           Top = 26
@@ -340,8 +336,6 @@ object MainForm: TMainForm
     Caption = 'boxFooter'
     ShowCaption = False
     TabOrder = 1
-    ExplicitTop = 672
-    ExplicitWidth = 453
     object Label17: TLabel
       Left = 15
       Top = 3
@@ -393,7 +387,6 @@ object MainForm: TMainForm
     ParentFont = False
     ShowCaption = False
     TabOrder = 2
-    ExplicitWidth = 453
     object Label10: TLabel
       Left = 15
       Top = 16
