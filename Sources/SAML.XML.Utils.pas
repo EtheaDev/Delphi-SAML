@@ -1,7 +1,7 @@
 {******************************************************************************}
 {                                                                              }
 {  Delphi SAML                                                                 }
-{  Copyright (c) 2022 Ethea                                                    }
+{  Copyright (c) 2022-2023 Ethea S.r.l.                                        }
 {  Author: Luca Minuti                                                         }
 {  https://github.com/EtheaDev/Delphi-SAML                                     }
 {                                                                              }
@@ -51,19 +51,26 @@ type
 
   TTemplateOptions = set of TTemplateOption;
 
+  IXMLSecDocument = interface;
+
   IXMLSecNode = interface
     ['{3E25268B-1BA8-4055-B5A6-CF8949F6E439}']
     function GetNodeName: string;
     function GetNamespace: string;
     function GetText: string;
+    function GetDocument: IXMLSecDocument;
+    function FindNode(const ANodeName, ANodeNameSpace: string): IXMLSecNode;
+    function TryFindNode(const ANodeName, ANodeNameSpace: string; out ANode: IXMLSecNode): Boolean;
 
     property NodeName: string read GetNodeName;
     property Namespace: string read GetNamespace;
+    property Document: IXMLSecDocument read GetDocument;
     property Text: string read GetText;
   end;
 
   IXMLSecDocument = interface
     ['{8C7E8120-AD30-4E7D-9725-0439625D9145}']
+    function Root: IXMLSecNode;
     function FindNode(const ANodeName, ANodeNameSpace: string): IXMLSecNode;
     function TryFindNode(const ANodeName, ANodeNameSpace: string; out ANode: IXMLSecNode): Boolean;
     procedure CheckSignatureTemplate(const AId: string; AOptions: TTemplateOptions);
@@ -79,7 +86,8 @@ type
     procedure LoadCeriticate(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
     function DumpKey: string;
     procedure Sign(AXMLDocument: IXMLSecDocument);
-    function Verify(AXMLDocument: IXMLSecDocument): Boolean;
+    function Verify(AXMLNode: IXMLSecNode): Boolean; overload;
+    function Verify(AXMLDocument: IXMLSecDocument): Boolean; overload;
   end;
 
   IEncryptionContext = interface
@@ -106,7 +114,8 @@ type
     procedure LoadCeriticate(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
     procedure Sign(AXMLDocument: IXMLSecDocument);
     function DumpKey: string;
-    function Verify(AXMLDocument: IXMLSecDocument): Boolean;
+    function Verify(AXMLNode: IXMLSecNode): Boolean; overload;
+    function Verify(AXMLDocument: IXMLSecDocument): Boolean; overload;
 
     constructor Create;
     destructor Destroy; override;
@@ -136,6 +145,7 @@ type
     FOwnsStream: Boolean;
     procedure ParseXMLStream;
   public
+    function Root: IXMLSecNode;
     function FindNode(const ANodeName, ANodeNameSpace: string): IXMLSecNode;
     function TryFindNode(const ANodeName, ANodeNameSpace: string; out ANode: IXMLSecNode): Boolean;
     procedure AddIDAttr(const AAttributeName, ANodeName, ANameSpace: string);
@@ -152,13 +162,17 @@ type
   TXMLSecNode = class(TInterfacedObject, IXMLSecNode)
   private
     FNode: xmlNodePtr;
+    FDocument: IXMLSecDocument;
   public
     { IXMLSecNode }
     function GetNodeName: string;
     function GetNamespace: string;
     function GetText: string;
+    function GetDocument: IXMLSecDocument;
+    function FindNode(const ANodeName, ANodeNameSpace: string): IXMLSecNode;
+    function TryFindNode(const ANodeName, ANodeNameSpace: string; out ANode: IXMLSecNode): Boolean;
 
-    constructor Create(ANode: xmlNodePtr);
+    constructor Create(ADocument: IXMLSecDocument; ANode: xmlNodePtr);
   end;
 
   TXMLSchemaValidContext = class(TInterfacedObject, IXMLSchemaValidContext)
@@ -181,6 +195,25 @@ type
   TXMLCatalog = class
   public
     class procedure LoadFromFile(const AFileName: string); static;
+  end;
+
+  TXMLSecError = record
+    ErrorMessage: string;
+    Func, Name: string;
+    Line: Integer;
+    ErrorObject, Subject: string;
+    ErrorNo: Integer;
+    ErrorString1, ErrorString2: string
+  end;
+
+  TErrorProc = reference to procedure (const ASecError: TXMLSecError);
+
+  TXMLSec = class
+  private
+    class var FErrorProc: TErrorProc;
+    class procedure ErrorNotify(const AMessage: string; const AFunc, AName: string; ALine: Integer; const AObject, ASubject: string; AErrorNo: Integer; const AErrorString1, AErrorString2: string);  public
+  public
+    class procedure RegisterErrorCallback(AErrorProc: TErrorProc); static;
   end;
 
 const
@@ -222,9 +255,11 @@ end;
 // 'func=%s:file=%s:line=%d:obj=%s:subj=%s:error=%d:%s:%s'#$A
 {$IFDEF ENABLE_ERROR_CALLBACK}
 procedure ErrorCallback(ctx: Pointer; const msg: PAnsiChar; const func, fname: PAnsiChar; line: Integer; const obj, sub: PAnsiChar; error_n: Integer; const error_s1, error_s2: PAnsiChar); cdecl;
+var
+  LMessage: string;
 begin
-  //Log(string(Msg));
-  //OutputDebugString(PChar(AMessage));
+  LMessage := Format(string(msg), [func, fname, line, obj, sub, error_n, error_s1, error_s2]);
+  TXMLSec.ErrorNotify(LMessage, string(func), string(fname), line, string(obj), string(sub), error_n, string(error_s1), string(error_s2));
 end;
 {$ENDIF}
 
@@ -524,6 +559,11 @@ begin
     raise EXMLError.Create('Error: unable to parse XML');
 end;
 
+function TXMLSecDocument.Root: IXMLSecNode;
+begin
+  Result := TXMLSecNode.Create(Self, FDocPtr.children);
+end;
+
 procedure TXMLSecDocument.SaveToFile(const AFileName: string);
 begin
   xmlSaveFile(PAnsiChar(AnsiString(AFileName)), FDocPtr);
@@ -532,7 +572,7 @@ end;
 function TXMLSecDocument.FindNode(const ANodeName, ANodeNameSpace: string): IXMLSecNode;
 begin
   if not TryFindNode(ANodeName, ANodeNameSpace, Result) then
-    raise EXMLError.Create('Error: start node not found XML');
+    raise EXMLError.CreateFmt('Error: node "%s" not found (%s)', [ANodeName, ANodeNameSpace]);
 end;
 
 procedure TXMLSecDocument.SetRootElement(ANode: IXMLSecNode);
@@ -564,7 +604,7 @@ begin
   begin
     Exit(False);
   end;
-  ANode := TXMLSecNode.Create(node);
+  ANode := TXMLSecNode.Create(Self, node);
   Exit(True);
 end;
 
@@ -717,26 +757,46 @@ end;
 
 function TSignatureContext.Verify(AXMLDocument: IXMLSecDocument): Boolean;
 var
+  LXMLNode: IXMLSecNode;
+begin
+  LXMLNode := AXMLDocument.Root;
+  Result := Verify(LXMLNode);
+end;
+
+function TSignatureContext.Verify(AXMLNode: IXMLSecNode): Boolean;
+var
   node: xmlNodePtr;
 begin
-  node := (AXMLDocument.FindNode(string(xmlSecNodeSignature), string(xmlSecDSigNs)) as TXMLSecNode).FNode;
+  node := (AXMLNode.FindNode(string(xmlSecNodeSignature), string(xmlSecDSigNs)) as TXMLSecNode).FNode;
 
-  (* Verify signature *)
+  // Verify signature
   if xmlSecDSigCtxVerify(dsigCtx, node) < 0 then
   begin
     raise EXMLError.Create('Error: signature verify');
   end;
 
-  (* print verification result to stdout *)
   Result := dsigCtx.status = xmlSecDSigStatusSucceeded;
 end;
 
 { TXMLSecNode }
 
-constructor TXMLSecNode.Create(ANode: xmlNodePtr);
+constructor TXMLSecNode.Create(ADocument: IXMLSecDocument; ANode: xmlNodePtr);
 begin
   inherited Create;
+  FDocument := ADocument;
   FNode := ANode;
+end;
+
+function TXMLSecNode.FindNode(const ANodeName,
+  ANodeNameSpace: string): IXMLSecNode;
+begin
+  if not TryFindNode(ANodeName, ANodeNameSpace, Result) then
+    raise EXMLError.CreateFmt('Error: node "%s" not found (%s)', [ANodeName, ANodeNameSpace]);
+end;
+
+function TXMLSecNode.GetDocument: IXMLSecDocument;
+begin
+  Result := FDocument;
 end;
 
 function TXMLSecNode.GetNamespace: string;
@@ -766,6 +826,22 @@ begin
     Exit('');
   Result := string(AnsiString(LText));
   xmlFree(LText);
+end;
+
+function TXMLSecNode.TryFindNode(const ANodeName, ANodeNameSpace: string;
+  out ANode: IXMLSecNode): Boolean;
+var
+  node: xmlNodePtr;
+begin
+  // find start node
+  // xmlSecNodeSignature, xmlSecDSigNs
+  node := xmlSecFindNode(FNode, PAnsiChar(AnsiString(ANodeName)), PAnsiChar(AnsiString(ANodeNameSpace)));
+  if node = nil then
+  begin
+    Exit(False);
+  end;
+  ANode := TXMLSecNode.Create(FDocument, node);
+  Exit(True);
 end;
 
 { TEncryptionContext }
@@ -920,6 +996,35 @@ begin
   LNodePtr := (ANode as TXMLSecNode).FNode;
   RetCode := xmlSchemaValidateOneElement(FSchemaValidCtxt, LNodePtr);
   LibXMLCheck(RetCode);
+end;
+
+{ TXMLSec }
+
+class procedure TXMLSec.ErrorNotify(const AMessage, AFunc, AName: string;
+  ALine: Integer; const AObject, ASubject: string; AErrorNo: Integer;
+  const AErrorString1, AErrorString2: string);
+var
+  LXMLSecError: TXMLSecError;
+begin
+  if Assigned(FErrorProc) then
+  begin
+    LXMLSecError.ErrorMessage := AMessage;
+    LXMLSecError.Func := AFunc;
+    LXMLSecError.Name := AName;
+    LXMLSecError.Line := ALine;
+    LXMLSecError.ErrorObject := AObject;
+    LXMLSecError.Subject := ASubject;
+    LXMLSecError.ErrorNo := AErrorNo;
+    LXMLSecError.ErrorString1 := AErrorString1;
+    LXMLSecError.ErrorString2 := AErrorString2;
+
+    FErrorProc(LXMLSecError);
+  end;
+end;
+
+class procedure TXMLSec.RegisterErrorCallback(AErrorProc: TErrorProc);
+begin
+  FErrorProc := AErrorProc;
 end;
 
 initialization

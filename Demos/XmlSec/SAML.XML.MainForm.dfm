@@ -2,8 +2,8 @@ object MainForm: TMainForm
   Left = 0
   Top = 0
   Caption = 'XmlSec DEMO'
-  ClientHeight = 573
-  ClientWidth = 946
+  ClientHeight = 647
+  ClientWidth = 953
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -13,15 +13,15 @@ object MainForm: TMainForm
   OnCreate = FormCreate
   TextHeight = 17
   object Label1: TLabel
-    Left = 15
+    Left = 8
     Top = 79
     Width = 62
     Height = 17
     Caption = 'Input XML:'
   end
   object Label2: TLabel
-    Left = 488
-    Top = 374
+    Left = 8
+    Top = 456
     Width = 63
     Height = 17
     Caption = 'public Key:'
@@ -34,32 +34,32 @@ object MainForm: TMainForm
     Caption = 'Output XML:'
   end
   object Label4: TLabel
-    Left = 15
-    Top = 373
+    Left = 8
+    Top = 359
     Width = 67
     Height = 17
     Caption = 'Private Key:'
   end
   object Label5: TLabel
-    Left = 15
-    Top = 424
+    Left = 8
+    Top = 412
     Width = 44
     Height = 17
     Caption = 'Format:'
   end
   object Label6: TLabel
-    Left = 488
-    Top = 424
+    Left = 8
+    Top = 506
     Width = 44
     Height = 17
     Caption = 'Format:'
   end
   object Label7: TLabel
-    Left = 15
-    Top = 469
+    Left = 8
+    Top = 551
     Width = 147
     Height = 17
-    Caption = 'Root node (tagName,ns):'
+    Caption = 'Root node (ns:tagName):'
   end
   object memInput: TMemo
     Left = 8
@@ -80,28 +80,26 @@ object MainForm: TMainForm
     WordWrap = False
   end
   object edtInputXMLName: TComboBox
-    Left = 15
+    Left = 8
     Top = 99
     Width = 361
     Height = 25
     TabOrder = 1
-    Text = 'signed-response.xml'
+    OnChange = edtInputXMLNameChange
   end
   object edtPublicKeyName: TComboBox
-    Left = 488
-    Top = 395
+    Left = 8
+    Top = 477
     Width = 450
     Height = 25
     TabOrder = 2
-    Text = 'sp-cert.pem'
   end
   object edtPrivateKeyName: TComboBox
-    Left = 15
-    Top = 395
+    Left = 8
+    Top = 381
     Width = 450
     Height = 25
     TabOrder = 3
-    Text = 'sp-key.pem'
   end
   object memOutput: TMemo
     Left = 488
@@ -122,8 +120,8 @@ object MainForm: TMainForm
     WordWrap = False
   end
   object edtPrivateKeyFormat: TComboBox
-    Left = 15
-    Top = 445
+    Left = 8
+    Top = 431
     Width = 450
     Height = 25
     Style = csDropDownList
@@ -140,8 +138,8 @@ object MainForm: TMainForm
       'CertDer = 8')
   end
   object edtPublicKeyFormat: TComboBox
-    Left = 488
-    Top = 445
+    Left = 8
+    Top = 527
     Width = 450
     Height = 25
     Style = csDropDownList
@@ -163,7 +161,6 @@ object MainForm: TMainForm
     Width = 360
     Height = 25
     TabOrder = 7
-    Text = 'signed-response.xml'
   end
   object btnInputXMLView: TButton
     Left = 382
@@ -185,16 +182,16 @@ object MainForm: TMainForm
   end
   object boxFooter: TPanel
     Left = 0
-    Top = 528
-    Width = 946
+    Top = 602
+    Width = 953
     Height = 45
     Align = alBottom
     BevelOuter = bvNone
     Caption = 'boxFooter'
     ShowCaption = False
     TabOrder = 10
-    ExplicitTop = 498
-    ExplicitWidth = 944
+    ExplicitTop = 598
+    ExplicitWidth = 951
     object btnSign: TButton
       AlignWithMargins = True
       Left = 3
@@ -255,7 +252,7 @@ object MainForm: TMainForm
   object boxHeader: TPanel
     Left = 0
     Top = 0
-    Width = 946
+    Width = 953
     Height = 66
     Align = alTop
     BevelOuter = bvNone
@@ -268,7 +265,7 @@ object MainForm: TMainForm
     ParentFont = False
     ShowCaption = False
     TabOrder = 11
-    ExplicitWidth = 944
+    ExplicitWidth = 951
     object Label10: TLabel
       Left = 15
       Top = 16
@@ -297,14 +294,32 @@ object MainForm: TMainForm
     end
   end
   object cmbRoot: TComboBox
-    Left = 15
-    Top = 491
+    Left = 8
+    Top = 571
     Width = 450
     Height = 25
     TabOrder = 12
-    Text = 'AuthnRequest,urn:oasis:names:tc:SAML:2.0:protocol'
+    Text = 'urn:oasis:names:tc:SAML:2.0:protocol:AuthnRequest'
     Items.Strings = (
-      'AuthnRequest,urn:oasis:names:tc:SAML:2.0:protocol'
-      'EntityDescriptor,urn:oasis:names:tc:SAML:2.0:metadata')
+      'urn:oasis:names:tc:SAML:2.0:protocol:AuthnRequest'
+      'urn:oasis:names:tc:SAML:2.0:metadata:EntityDescriptor'
+      'urn:oasis:names:tc:SAML:2.0:protocol:Response'
+      'urn:oasis:names:tc:SAML:2.0:assertion:Assertion')
+  end
+  object memLog: TMemo
+    Left = 488
+    Top = 381
+    Width = 450
+    Height = 215
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -13
+    Font.Name = 'Courier New'
+    Font.Style = []
+    ParentFont = False
+    ReadOnly = True
+    ScrollBars = ssBoth
+    TabOrder = 13
+    WordWrap = False
   end
 end
