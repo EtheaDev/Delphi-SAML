@@ -39,6 +39,7 @@ type
     procedure LoadFromMetadata(const AValue: string); overload;
     procedure LoadFromMetadata(ANode: IXMLNode); overload;
     procedure LoadFromFile(const AFileName: string; AFormat: TKeyDataFormat);
+    procedure LoadFromBuffer(ABuffer: TBytes; AFormat: TKeyDataFormat);
     procedure Clear;
     function IsEmpty: Boolean;
     property Data: TBytes read FData;
@@ -51,6 +52,7 @@ type
     FFormat: TKeyDataFormat;
   public
     procedure LoadFromFile(const AFileName: string; AFormat: TKeyDataFormat);
+    procedure LoadFromBuffer(ABuffer: TBytes; AFormat: TKeyDataFormat);
     procedure Clear;
     function IsEmpty: Boolean;
     property Data: TBytes read FData;
@@ -560,6 +562,13 @@ begin
   Result := Length(FData) = 0;
 end;
 
+procedure TSAMLCertificate.LoadFromBuffer(ABuffer: TBytes;
+  AFormat: TKeyDataFormat);
+begin
+  FData := ABuffer;
+  FFormat := AFormat;
+end;
+
 procedure TSAMLCertificate.LoadFromFile(const AFileName: string;
   AFormat: TKeyDataFormat);
 var
@@ -609,6 +618,12 @@ end;
 function TSAMLKey.IsEmpty: Boolean;
 begin
   Result := Length(FData) = 0;
+end;
+
+procedure TSAMLKey.LoadFromBuffer(ABuffer: TBytes; AFormat: TKeyDataFormat);
+begin
+  FData := ABuffer;
+  FFormat := AFormat;
 end;
 
 procedure TSAMLKey.LoadFromFile(const AFileName: string;
