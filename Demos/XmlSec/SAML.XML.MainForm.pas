@@ -59,6 +59,7 @@ type
     Label7: TLabel;
     cmbRoot: TComboBox;
     memLog: TMemo;
+    chkAddSignatureTemplate: TCheckBox;
     procedure btnSignClick(Sender: TObject);
     procedure btnVerifyClick(Sender: TObject);
     procedure btnDecryptClick(Sender: TObject);
@@ -124,6 +125,7 @@ end;
 procedure TMainForm.btnSignClick(Sender: TObject);
 var
   LXMLDocument: IXMLSecDocument;
+  LIdNode: IXMLSecNode;
   LSignatureContext: ISignatureContext;
   LNodeInfo: TNodeInfo;
 begin
@@ -132,7 +134,16 @@ begin
   LNodeInfo := cmbRoot.Text;
 
   LXMLDocument := TXMLSecDocument.Create(TFileStream.Create(edtInputXMLName.Text, fmOpenRead), True);
-  LXMLDocument.CheckSignatureTemplate('', []);
+
+  if chkAddSignatureTemplate.Checked then
+  begin
+    if not LXMLDocument.TryFindNode(LNodeInfo.TagName, LNodeInfo.Namespace, LIdNode) then
+      raise Exception.CreateFmt('Node %s:%s not found', [LNodeInfo.TagName, LNodeInfo.Namespace]);
+
+    LXMLDocument.CheckSignatureTemplate(LIdNode.ID, [TTemplateOption.InjectCertificate]);
+  end
+  else
+    LXMLDocument.CheckSignatureTemplate('', []);
 
   LXMLDocument.AddIDAttr('ID', LNodeInfo.TagName, LNodeInfo.Namespace);
 
@@ -141,7 +152,9 @@ begin
   LSignatureContext.Sign(LXMLDocument);
 
   memOutput.Text := LXMLDocument.ToXML;
-  LXMLDocument.SaveToFile(edtOutputXMLName.Text);
+
+  if edtOutputXMLName.Text <> '' then
+    LXMLDocument.SaveToFile(edtOutputXMLName.Text);
 end;
 
 procedure TMainForm.btnVerifyClick(Sender: TObject);

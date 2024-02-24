@@ -16,13 +16,18 @@ const
 {$ENDIF}
 {$IFDEF WIN64}
   LIBXMLSEC_SO = 'libxmlsec1.dll';
+  {$DEFINE USE_32BIT_TIME_T}
 {$ENDIF}
 {$IFDEF LINUX}
   LIBXMLSEC_SO = 'libxmlsec.so';
 {$ENDIF}
 
 type
+      {$IFDEF USE_32BIT_TIME_T}
+      time_t = Int64;
+      {$ELSE}
       time_t = LongInt;
+      {$ENDIF}
       xmlSecSize = Cardinal;
       xmlSecSizePtr = ^xmlSecSize;
       xmlSecByte = Byte;

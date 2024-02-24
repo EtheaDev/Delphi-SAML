@@ -58,6 +58,7 @@ type
     function GetNodeName: string;
     function GetNamespace: string;
     function GetText: string;
+    function GetID: string;
     function GetDocument: IXMLSecDocument;
     function FindNode(const ANodeName, ANodeNameSpace: string): IXMLSecNode;
     function TryFindNode(const ANodeName, ANodeNameSpace: string; out ANode: IXMLSecNode): Boolean;
@@ -66,6 +67,7 @@ type
     property Namespace: string read GetNamespace;
     property Document: IXMLSecDocument read GetDocument;
     property Text: string read GetText;
+    property ID: string read GetID;
   end;
 
   IXMLSecDocument = interface
@@ -168,6 +170,7 @@ type
     function GetNodeName: string;
     function GetNamespace: string;
     function GetText: string;
+    function GetID: string;
     function GetDocument: IXMLSecDocument;
     function FindNode(const ANodeName, ANodeNameSpace: string): IXMLSecNode;
     function TryFindNode(const ANodeName, ANodeNameSpace: string; out ANode: IXMLSecNode): Boolean;
@@ -797,6 +800,25 @@ end;
 function TXMLSecNode.GetDocument: IXMLSecDocument;
 begin
   Result := FDocument;
+end;
+
+function TXMLSecNode.GetID: string;
+var
+  LAttrib: xmlAttrPtr;
+  LValue: xmlCharPtr;
+begin
+  LAttrib := FNode^.properties;
+  while LAttrib <> nil do
+  begin
+    if AnsiString(LAttrib.name) = 'ID' then
+    begin
+      LValue := xmlNodeListGetString(FNode.doc, LAttrib^.children, 1);
+      Result := string(LValue);
+      xmlFree(LValue);
+      Exit;
+    end;
+    LAttrib := LAttrib^.next;
+  end;
 end;
 
 function TXMLSecNode.GetNamespace: string;

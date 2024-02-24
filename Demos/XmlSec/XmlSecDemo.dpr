@@ -24,7 +24,7 @@ program XmlSecDemo;
 
 uses
   Vcl.Forms,
-  SAML.XML.MainForm in 'SAML.XML.MainForm.pas' {MainForm},
+  SAML.XML.MainForm in 'SAML.XML.MainForm.pas' {chkSignatureTemplate},
   SAML.XML.Utils in '..\..\Sources\SAML.XML.Utils.pas',
   libexslt in '..\..\Sources\bindings\libexslt.pas',
   libxml2 in '..\..\Sources\bindings\libxml2.pas',
