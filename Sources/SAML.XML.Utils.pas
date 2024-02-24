@@ -682,7 +682,7 @@ end;
 procedure TSignatureContext.LoadCeriticate(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
 var
   data: xmlSecBytePtr;
-  dataSize: Cardinal;
+  dataSize: NativeInt;
 begin
   Assert(AStream <> nil);
   Assert(AStream.Size > 0);
@@ -710,7 +710,7 @@ procedure TSignatureContext.LoadKey(AStream: TStream; AFormat: TKeyDataFormat;
   AOwnsStream: Boolean);
 var
   data: xmlSecBytePtr;
-  dataSize: Cardinal;
+  dataSize: NativeInt;
 begin
   Assert(AStream <> nil);
   Assert(AStream.Size > 0);
@@ -905,7 +905,7 @@ procedure TEncryptionContext.LoadKey(AStream: TStream; AFormat: TKeyDataFormat;
   AOwnsStream: Boolean);
 var
   data: xmlSecBytePtr;
-  dataSize: Cardinal;
+  dataSize: xmlSecSize;
   key: xmlSecKeyPtr;
 begin
   Assert(AStream <> nil);

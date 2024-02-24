@@ -190,8 +190,6 @@ object MainForm: TMainForm
     Caption = 'boxFooter'
     ShowCaption = False
     TabOrder = 10
-    ExplicitTop = 598
-    ExplicitWidth = 951
     object btnSign: TButton
       AlignWithMargins = True
       Left = 3
@@ -265,7 +263,6 @@ object MainForm: TMainForm
     ParentFont = False
     ShowCaption = False
     TabOrder = 11
-    ExplicitWidth = 951
     object Label10: TLabel
       Left = 15
       Top = 16
@@ -307,7 +304,7 @@ object MainForm: TMainForm
       'urn:oasis:names:tc:SAML:2.0:assertion:Assertion')
   end
   object memLog: TMemo
-    Left = 488
+    Left = 495
     Top = 381
     Width = 450
     Height = 215

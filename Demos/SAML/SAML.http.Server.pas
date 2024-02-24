@@ -140,7 +140,7 @@ begin
     .SetAuthnContextClassRef(ASPConfig.AuthnContextClassRef)
     .AsXML;
 
-  //TFile.WriteAllText('sp-authnrequest.xml', LRequestXML);
+  TFile.WriteAllText('sp-authnrequest.xml', LRequestXML);
 
   if LSigned then
     Result := SignRequest(LRequestXML, LId, ASPConfig.SigningKey, ASPConfig.SigningCertificate)

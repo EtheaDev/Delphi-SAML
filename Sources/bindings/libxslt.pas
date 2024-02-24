@@ -12,7 +12,11 @@ uses libxml2;
 const
 {$IFDEF WIN32}
   LIBXSLT_SO = 'libxslt.dll';
-{$ELSE}
+{$ENDIF}
+{$IFDEF WIN64}
+  LIBXSLT_SO = 'libxslt-1.dll';
+{$ENDIF}
+{$IFDEF LiNUX}
   LIBXSLT_SO = 'libxslt.so';
 {$ENDIF}
 
@@ -670,7 +674,7 @@ var
 
 implementation
 uses
-{$IFDEF WIN32}
+{$IFDEF MSWINDOWS}
   Windows,
 {$ENDIF}
   SysUtils;

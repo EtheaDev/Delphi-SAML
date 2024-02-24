@@ -85,6 +85,8 @@ type
     chkWantAuthnRequestsSigned: TCheckBox;
     Label18: TLabel;
     cmbAuthContext: TComboBox;
+    TabLog: TTabSheet;
+    MemoLog: TMemo;
     procedure btnStartClick(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -110,6 +112,7 @@ type
     procedure AppendFileToCombo(AComboBox: TComboBox;
       const ASearchPattern: string);
   public
+    procedure Log(const AMessage: string);
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
   end;
@@ -165,6 +168,13 @@ constructor TMainForm.Create(AOwner: TComponent);
 begin
   inherited;
   FHttpServer := TmodHttpServer.Create(nil);
+
+  TXMLSec.RegisterErrorCallback(
+    procedure (const ASecError: TXMLSecError)
+    begin
+      MainForm.Log(ASecError.ErrorMessage);
+    end
+  );
 end;
 
 destructor TMainForm.Destroy;
@@ -300,6 +310,15 @@ begin
     edtSpSignPubKey.Text := '<embedded>';
   if not FHttpServer.SPConfig.EncryptionCertificate.IsEmpty then
     edtSpEncPubKey.Text := '<embedded>';
+end;
+
+procedure TMainForm.Log(const AMessage: string);
+begin
+  TThread.Queue(nil,
+  procedure
+  begin
+    MemoLog.Lines.Add(AMessage);
+  end);
 end;
 
 initialization

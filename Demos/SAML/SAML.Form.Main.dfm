@@ -20,7 +20,7 @@ object MainForm: TMainForm
     Top = 69
     Width = 449
     Height = 604
-    ActivePage = tabIdP
+    ActivePage = TabLog
     Align = alClient
     TabOrder = 0
     object tabIdP: TTabSheet
@@ -323,6 +323,31 @@ object MainForm: TMainForm
           TabOrder = 0
           OnChange = edtSPPresetsChange
         end
+      end
+    end
+    object TabLog: TTabSheet
+      Caption = 'TabLog'
+      ImageIndex = 2
+      object MemoLog: TMemo
+        Left = 0
+        Top = 0
+        Width = 441
+        Height = 572
+        Align = alClient
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -13
+        Font.Name = 'Consolas'
+        Font.Style = []
+        ParentFont = False
+        ReadOnly = True
+        ScrollBars = ssBoth
+        TabOrder = 0
+        WordWrap = False
+        ExplicitLeft = 88
+        ExplicitTop = 128
+        ExplicitWidth = 185
+        ExplicitHeight = 89
       end
     end
   end

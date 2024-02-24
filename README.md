@@ -15,7 +15,7 @@
 * Compile Demos\SAML\SPDemo.dpr
 * Run it
 * Choose `idp-auth0.ini` in Identity Provider settings
-* Choose `sp-samltest.ini` in Serivce Provider settings
+* Choose `sp-auth0.ini` in Serivce Provider settings
 * Click `Open Browser` and follow the instructions
 
 ## Demo

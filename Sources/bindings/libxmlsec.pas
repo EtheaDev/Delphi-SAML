@@ -7,12 +7,17 @@ interface
 {$ALIGN 8}
 {$MINENUMSIZE 4}
 
-uses libxml2, libxslt;
+uses
+  libxml2, libxslt;
 
 const
 {$IFDEF WIN32}
   LIBXMLSEC_SO = 'libxmlsec.dll';
-{$ELSE}
+{$ENDIF}
+{$IFDEF WIN64}
+  LIBXMLSEC_SO = 'libxmlsec1.dll';
+{$ENDIF}
+{$IFDEF LINUX}
   LIBXMLSEC_SO = 'libxmlsec.so';
 {$ENDIF}
 
@@ -1669,7 +1674,7 @@ type
 
 implementation
 uses
-{$IFDEF WIN32}
+{$IFDEF MSWINDOWS}
   Windows,
 {$ENDIF}
   SysUtils;
