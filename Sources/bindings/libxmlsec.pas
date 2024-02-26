@@ -4,6 +4,8 @@ Unit libxmlsec;
 
 interface
 
+{$INCLUDE ../SAML.inc}
+
 {$ALIGN 8}
 {$MINENUMSIZE 4}
 
@@ -11,24 +13,29 @@ uses
   libxml2, libxslt;
 
 const
-{$IFDEF WIN32}
-  LIBXMLSEC_SO = 'libxmlsec.dll';
-{$ENDIF}
-{$IFDEF WIN64}
-  LIBXMLSEC_SO = 'libxmlsec1.dll';
-  {$DEFINE USE_32BIT_TIME_T}
-{$ENDIF}
-{$IFDEF LINUX}
+{$IFDEF MSWINDOWS}
+  LIBXMLSEC_SO = {$IFDEF USE_VS_LIBS}'libxmlsec.dll'{$ELSE}'libxmlsec1.dll'{$ENDIF};
+{$ELSE}
   LIBXMLSEC_SO = 'libxmlsec.so';
 {$ENDIF}
 
+{$IFNDEF USE_VS_LIBS}
+  // for MinGW runtime
+  {$DEFINE _USE_32BIT_TIME_T}
+{$ENDIF}
+
 type
-      {$IFDEF USE_32BIT_TIME_T}
-      time_t = Int64;
+      {$IFDEF _USE_32BIT_TIME_T}
+            time_t = LongInt;
       {$ELSE}
-      time_t = LongInt;
+            time_t = Int64;
       {$ENDIF}
-      xmlSecSize = Cardinal;
+      {$IFDEF WIN32}
+            xmlSecSize = Cardinal;
+      {$ENDIF}
+      {$IFDEF WIN64}
+            xmlSecSize = UInt64;
+      {$ENDIF}
       xmlSecSizePtr = ^xmlSecSize;
       xmlSecByte = Byte;
       xmlSecBytePtr = ^xmlSecByte;
@@ -59,6 +66,12 @@ type
           xmlSecDSigStatusUnknown = 0,
           xmlSecDSigStatusSucceeded = 1,
           xmlSecDSigStatusInvalid = 2);
+
+      xmlSecDSigFailureReason = (
+          xmlSecDSigFailureReasonUnknown = 0,
+          xmlSecDSigFailureReasonReference = 1,
+          xmlSecDSigFailureReasonSignature = 2,
+          xmlSecDSigFailureReasonKeyNotFound = 3);
 
       xmlSecKeyDataFormat = (
           xmlSecKeyDataFormatUnknown = 0,
@@ -460,9 +473,15 @@ type
           userData : Pointer; {}
           flags : Cardinal; {}
           flags2 : Cardinal; {}
+          {$IFDEF USE_XMLSEC1_3}
+          binaryChunkSize : xmlSecSize;
+          {$ENDIF}
           enabledUris : xmlSecTransformUriType; {}
           enabledTransforms : xmlSecPtrList; {}
           preExecCallback : xmlSecTransformCtxPreExecuteCallback; { results}
+          {$IFDEF USE_XMLSEC1_3}
+          parentKeyInfoCtx : xmlSecKeyInfoCtxPtr;
+          {$ENDIF}
           result : xmlSecBufferPtr; {}
           status : xmlSecTransformStatus; {}
           uri : xmlCharPtr; {}
@@ -493,13 +512,23 @@ type
           base64LineSize : Longint; { RetrievalMethod}
           retrievalMethodCtx : xmlSecTransformCtx; {}
           maxRetrievalMethodLevel : Longint; { EncryptedKey}
+          {$IFDEF USE_XMLSEC1_3}
+          keyInfoReferenceCtx : xmlSecTransformCtx;
+          maxKeyInfoReferenceLevel : Longint;
+          {$ENDIF}
           encCtx : xmlSecEncCtxPtr; {}
           maxEncryptedKeyLevel : Longint; { x509 certificates}
           certsVerificationTime : time_t; {}
           certsVerificationDepth : Longint; { PGP}
           pgpReserved : Pointer; { TODO internal data}
           curRetrievalMethodLevel : Longint; {}
+          {$IFDEF USE_XMLSEC1_3}
+          curKeyInfoReferenceLevel : Longint;
+          {$ENDIF}
           curEncryptedKeyLevel : Longint; {}
+          {$IFDEF USE_XMLSEC1_3}
+          operation : xmlSecTransformOperation;
+          {$ENDIF}
           keyReq : xmlSecKeyReq; { for the future}
           reserved0 : Pointer; {}
           reserved1 : Pointer; {}
@@ -522,6 +551,9 @@ type
           operation : xmlSecTransformOperation; {}
           result : xmlSecBufferPtr; {}
           status : xmlSecDSigStatus; {}
+          {$IFDEF USE_XMLSEC1_3}
+          failureReason : xmlSecDSigFailureReason;
+          {$ENDIF}
           signMethod : xmlSecTransformPtr; {}
           c14nMethod : xmlSecTransformPtr; {}
           preSignMemBufMethod : xmlSecTransformPtr; {}

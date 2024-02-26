@@ -4,19 +4,17 @@ Unit libxslt;
 
 interface
 
+{$INCLUDE ../SAML.inc}
+
 {$ALIGN 8}
 {$MINENUMSIZE 4}
 
 uses libxml2;
 
 const
-{$IFDEF WIN32}
-  LIBXSLT_SO = 'libxslt.dll';
-{$ENDIF}
-{$IFDEF WIN64}
-  LIBXSLT_SO = 'libxslt-1.dll';
-{$ENDIF}
-{$IFDEF LiNUX}
+{$IFDEF MSWINDOWS}
+  LIBXSLT_SO = {$IFDEF USE_VS_LIBS}'libxslt.dll'{$ELSE}'libxslt-1.dll'{$ENDIF};
+{$ELSE}
   LIBXSLT_SO = 'libxslt.so';
 {$ENDIF}
 

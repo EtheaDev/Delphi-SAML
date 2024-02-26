@@ -4,19 +4,15 @@ Unit libxml2;
 
 interface
 
+{$INCLUDE ../SAML.inc}
+
 {$ALIGN 8}
 {$MINENUMSIZE 4}
 
-
-
 const
-{$IFDEF WIN32}
-  LIBXML2_SO = 'libxml2.dll';
-{$ENDIF}
-{$IFDEF WIN64}
-  LIBXML2_SO = 'libxml2-2.dll';
-{$ENDIF}
-{$IFDEF LINUX}
+{$IFDEF MSWINDOWS}
+  LIBXML2_SO = {$IFDEF USE_VS_LIBS}'libxml2.dll'{$ELSE}'libxml2-2.dll'{$ENDIF};
+{$ELSE}
   LIBXML2_SO = 'libxml2.so';
 {$ENDIF}
 
