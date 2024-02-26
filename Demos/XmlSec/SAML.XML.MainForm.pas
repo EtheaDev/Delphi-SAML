@@ -149,6 +149,10 @@ begin
 
   LSignatureContext := TSignatureContext.Create;
   LSignatureContext.LoadKey(TFileStream.Create(edtPrivateKeyName.Text, fmOpenRead), TKeyDataFormat(edtPrivateKeyFormat.ItemIndex), True);
+
+  if edtPublicKeyName.Text <> '' then
+    LSignatureContext.LoadCertificate(TFileStream.Create(edtPublicKeyName.Text, fmOpenRead), TKeyDataFormat(edtPublicKeyFormat.ItemIndex), True);
+
   LSignatureContext.Sign(LXMLDocument);
 
   memOutput.Text := LXMLDocument.ToXML;
@@ -166,6 +170,9 @@ var
   LNodeInfo: TNodeInfo;
 begin
   ClearLog;
+
+  if edtPublicKeyName.Text = '' then
+    raise Exception.Create('Select a public key');
 
   LNodeInfo := cmbRoot.Text;
 
@@ -202,6 +209,8 @@ begin
 
   LKeyNode := LXMLDocument.FindNode('X509Certificate', 'http://www.w3.org/2000/09/xmldsig#');
   LKey := TNetEncoding.Base64.DecodeStringToBytes(LKeyNode.Text);
+  if Length(LKey) = 0 then
+    raise Exception.Create('No certificate found in signed XML');
 
   LSignatureContext := TSignatureContext.Create;
   LSignatureContext.LoadKey(TBytesStream.Create(LKey), TKeyDataFormat.CertDer, True);

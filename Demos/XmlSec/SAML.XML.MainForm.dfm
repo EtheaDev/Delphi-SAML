@@ -200,7 +200,6 @@ object MainForm: TMainForm
       Caption = 'Sign request'
       TabOrder = 0
       OnClick = btnSignClick
-      ExplicitTop = 0
     end
     object btnVerify: TButton
       AlignWithMargins = True
