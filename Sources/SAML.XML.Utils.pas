@@ -85,7 +85,7 @@ type
   ISignatureContext = interface
     ['{14110BA5-ACEA-4F22-9D52-1A31E4327A96}']
     procedure LoadKey(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
-    procedure LoadCeriticate(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
+    procedure LoadCertificate(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
     function DumpKey: string;
     procedure Sign(AXMLDocument: IXMLSecDocument);
     function Verify(AXMLNode: IXMLSecNode): Boolean; overload;
@@ -107,13 +107,15 @@ type
 
   TSignatureContext = class(TInterfacedObject, ISignatureContext)
   private
-    FStream: TStream;
-    FOwnsStream: Boolean;
+    FKeyStream: TStream;
+    FCertificateStream: TStream;
+    FOwnsKey: Boolean;
+    FOwnsCertificate: Boolean;
     dsigCtx: xmlSecDSigCtxPtr;
   public
     { ISignatureContext }
     procedure LoadKey(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
-    procedure LoadCeriticate(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
+    procedure LoadCertificate(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
     procedure Sign(AXMLDocument: IXMLSecDocument);
     function DumpKey: string;
     function Verify(AXMLNode: IXMLSecNode): Boolean; overload;
@@ -616,7 +618,8 @@ end;
 constructor TSignatureContext.Create;
 begin
   inherited Create;
-  FOwnsStream := False;
+  FOwnsKey := False;
+  FOwnsCertificate := False;
   XmlCryptInit;
 
   // create signature context, we don't need keys manager in this example */
@@ -629,8 +632,10 @@ end;
 
 destructor TSignatureContext.Destroy;
 begin
-  if FOwnsStream then
-    FStream.Free;
+  if FOwnsKey then
+    FKeyStream.Free;
+  if FOwnsCertificate then
+    FCertificateStream.Free;
   if dsigCtx <> nil then
     xmlSecDSigCtxDestroy(dsigCtx);
 
@@ -682,7 +687,7 @@ begin
 
 end;
 
-procedure TSignatureContext.LoadCeriticate(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
+procedure TSignatureContext.LoadCertificate(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
 var
   data: xmlSecBytePtr;
   dataSize: NativeInt;
@@ -690,8 +695,8 @@ begin
   Assert(AStream <> nil);
   Assert(AStream.Size > 0);
 
-  FStream := AStream;
-  FOwnsStream := AOwnsStream;
+  FCertificateStream := AStream;
+  FOwnsCertificate := AOwnsStream;
 
   dataSize := AStream.Size;
   data := AllocMem(dataSize);
@@ -718,8 +723,8 @@ begin
   Assert(AStream <> nil);
   Assert(AStream.Size > 0);
 
-  FStream := AStream;
-  FOwnsStream := AOwnsStream;
+  FKeyStream := AStream;
+  FOwnsKey := AOwnsStream;
 
   dataSize := AStream.Size;
   data := AllocMem(dataSize);

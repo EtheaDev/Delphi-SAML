@@ -1,4 +1,4 @@
-# Delphi SAML implementation
+﻿# Delphi SAML implementation
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) 
 
@@ -24,7 +24,13 @@
 
 ## Installation
 
-Download all zip files from https://www.zlatkovic.com/pub/libxml/ and extract all DLLs into the demos\bin folder.
+Download the zip files for your platform and extract all DLLs into the demos\bin folder.
+You can found the precompiled binaries of the DLL here:
+
+* *32bit*: https://www.zlatkovic.com/pub/libxml/
+* *64bit*: https://www.aleksey.com/xmlsec/download/win64/
+
+The required DLL are:
 
 * `libxmlsec.dll`: main DLL
     * `libxml2.dll`: to handle XML

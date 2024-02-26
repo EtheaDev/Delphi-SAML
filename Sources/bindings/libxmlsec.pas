@@ -19,11 +19,6 @@ const
   LIBXMLSEC_SO = 'libxmlsec.so';
 {$ENDIF}
 
-{$IFNDEF USE_VS_LIBS}
-  // for MinGW runtime
-  {$DEFINE _USE_32BIT_TIME_T}
-{$ENDIF}
-
 type
       {$IFDEF _USE_32BIT_TIME_T}
             time_t = LongInt;
@@ -44,6 +39,10 @@ type
       xmlEncCtxMode = (
           xmlEncCtxModeEncryptedData = 0,
           xmlEncCtxModeEncryptedKey = 1);
+
+      xmlSecEncFailureReason = (
+          xmlSecEncFailureReasonUnknown = 0,
+          xmlSecEncFailureReasonKeyNotFound = 1);
 
       xmlSecAllocMode = (
           xmlSecAllocModeExact = 0,
@@ -596,6 +595,9 @@ type
           resultBase64Encoded : Longint; {}
           resultReplaced : Longint; {}
           encMethod : xmlSecTransformPtr; { attributes from EncryptedData or EncryptedKey}
+          {$IFDEF USE_XMLSEC1_3}
+          failureReason : xmlSecEncFailureReason;
+          {$ENDIF}
           id : xmlCharPtr; {}
           type_ : xmlCharPtr; {}
           mimeType : xmlCharPtr; {}
@@ -606,7 +608,7 @@ type
           encMethodNode : xmlNodePtr; {}
           keyInfoNode : xmlNodePtr; {}
           cipherValueNode : xmlNodePtr; { reserved for future}
-          reserved0 : Pointer; {}
+          replacedNodeList : xmlNodePtr; {}
           reserved1 : Pointer; {}
       end;
 
