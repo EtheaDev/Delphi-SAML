@@ -109,7 +109,7 @@ begin
   LSignatureContext := TSignatureContext.Create;
   LSignatureContext.LoadKey(TBytesStream.Create(AKey.Data), AKey.Format, True);
   if Assigned(ACertificate) then
-    LSignatureContext.LoadCeriticate(TBytesStream.Create(ACertificate.Data), ACertificate.Format, True);
+    LSignatureContext.LoadCertificate(TBytesStream.Create(ACertificate.Data), ACertificate.Format, True);
 
   LSignatureContext.Sign(LXMLDocument);
 
