@@ -593,7 +593,7 @@ var
   PResult :xmlCharPtr;
   ResLength: Integer;
 begin
-  xmlDocDumpFormatMemoryEnc(FDocPtr, @PResult, @ResLength, 'UTF8', 0);
+  xmlDocDumpFormatMemoryEnc(FDocPtr, @PResult, @ResLength, 'UTF-8', 0);
   Result := UTF8ToString(PResult);
 end;
 
