@@ -60,6 +60,7 @@ type
     cmbRoot: TComboBox;
     memLog: TMemo;
     chkAddSignatureTemplate: TCheckBox;
+    chkAddEncryptionTemplate: TCheckBox;
     procedure btnSignClick(Sender: TObject);
     procedure btnVerifyClick(Sender: TObject);
     procedure btnDecryptClick(Sender: TObject);
@@ -100,16 +101,40 @@ procedure TMainForm.btnEncryptClick(Sender: TObject);
 var
   LXMLDocument: IXMLSecDocument;
   LEncryptionContext: IEncryptionContext;
+  LNodeInfo: TNodeInfo;
+  LIdNode: IXMLSecNode;
+  LNodeToEncrypt: IXMLSecNode;
 begin
   ClearLog;
 
+  LNodeInfo := cmbRoot.Text;
+
   LXMLDocument := TXMLSecDocument.Create(TFileStream.Create(edtInputXMLName.Text, fmOpenRead), True);
 
-  LEncryptionContext := TEncryptionContext.Create;
-  //LEncryptionContext.LoadKey(TFileStream.Create(edtPublicKeyName.Text, fmOpenRead), TKeyDataFormat(edtPublicKeyFormat.ItemIndex), True);
-  LEncryptionContext.Encrypt(LXMLDocument);
+  if chkAddEncryptionTemplate.Checked then
+  begin
+    if not LXMLDocument.TryFindNode(LNodeInfo.TagName, LNodeInfo.Namespace, LIdNode) then
+      raise Exception.CreateFmt('Node %s:%s not found', [LNodeInfo.TagName, LNodeInfo.Namespace]);
 
-  LXMLDocument.SaveToFile(edtOutputXMLName.Text);
+    LXMLDocument.CheckEncryptionTemplate(LIdNode.ID, [TTemplateOption.InjectCertificate]);
+  end
+  else
+    LXMLDocument.CheckEncryptionTemplate('', []);
+
+  //LXMLDocument.AddIDAttr('ID', LNodeInfo.TagName, LNodeInfo.Namespace);
+
+  LNodeToEncrypt := LXMLDocument.FindNode('info', 'urn:myns');
+
+  LEncryptionContext := TEncryptionContext.Create;
+  LEncryptionContext.LoadKey(TFileStream.Create(edtPrivateKeyName.Text, fmOpenRead), TKeyDataFormat(edtPrivateKeyFormat.ItemIndex), True);
+  LEncryptionContext.LoadCertificate(TFileStream.Create(edtPublicKeyName.Text, fmOpenRead), TKeyDataFormat(edtPublicKeyFormat.ItemIndex), True);
+  //LEncryptionContext.EncryptXML(LXMLDocument, LNodeToEncrypt);
+  LEncryptionContext.EncryptData(LXMLDocument, TEncoding.UTF8.GetBytes('test string'));
+
+  memOutput.Text := LXMLDocument.ToXML;
+
+  if edtOutputXMLName.Text <> '' then
+    LXMLDocument.SaveToFile(edtOutputXMLName.Text);
 end;
 
 procedure TMainForm.btnInputXMLViewClick(Sender: TObject);

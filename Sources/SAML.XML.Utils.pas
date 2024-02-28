@@ -76,6 +76,7 @@ type
     function FindNode(const ANodeName, ANodeNameSpace: string): IXMLSecNode;
     function TryFindNode(const ANodeName, ANodeNameSpace: string; out ANode: IXMLSecNode): Boolean;
     procedure CheckSignatureTemplate(const AId: string; AOptions: TTemplateOptions);
+    procedure CheckEncryptionTemplate(const AId: string; AOptions: TTemplateOptions);
     procedure AddIDAttr(const AAttributeName, ANodeName, ANameSpace: string);
     procedure SetRootElement(ANode: IXMLSecNode);
     function ToXML: string;
@@ -95,8 +96,10 @@ type
   IEncryptionContext = interface
     ['{F7BD8FA6-7626-440D-82A1-1D67DB735FFF}']
     procedure LoadKey(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
+    procedure LoadCertificate(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
     function IsEncrypted(AXMLDocument: IXMLSecDocument): Boolean;
-    procedure Encrypt(AXMLDocument: IXMLSecDocument);
+    procedure EncryptXML(AXMLDocument: IXMLSecDocument; ANode: IXMLSecNode);
+    procedure EncryptData(AXMLDocument: IXMLSecDocument; AData: TBytes);
     procedure Decrypt(AXMLDocument: IXMLSecDocument);
   end;
 
@@ -129,13 +132,17 @@ type
   private
     encCtx: xmlSecEncCtxPtr;
     keysMngr: xmlSecKeysMngrPtr;
-    FStream: TStream;
-    FOwnsStream: Boolean;
+    FKeyStream: TStream;
+    FOwnsKey: Boolean;
+    FCertificateStream: TStream;
+    FOwnsCertificate: Boolean;
   public
     { IEncryptionContext }
     procedure LoadKey(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
+    procedure LoadCertificate(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
     function IsEncrypted(AXMLDocument: IXMLSecDocument): Boolean;
-    procedure Encrypt(AXMLDocument: IXMLSecDocument);
+    procedure EncryptXML(AXMLDocument: IXMLSecDocument; ANode: IXMLSecNode);
+    procedure EncryptData(AXMLDocument: IXMLSecDocument; AData: TBytes);
     procedure Decrypt(AXMLDocument: IXMLSecDocument);
 
     constructor Create;
@@ -156,6 +163,8 @@ type
     procedure SetRootElement(ANode: IXMLSecNode);
     procedure AddSignatureTemplate(const AId: string; AOptions: TTemplateOptions);
     procedure CheckSignatureTemplate(const AId: string; AOptions: TTemplateOptions);
+    procedure AddEncryptionTemplate(const AId: string; AOptions: TTemplateOptions);
+    procedure CheckEncryptionTemplate(const AId: string; AOptions: TTemplateOptions);
     function ToXML: string;
     procedure SaveToFile(const AFileName: string);
 
@@ -440,6 +449,46 @@ end;
 
 { TXMLDocumentWrapper }
 
+procedure TXMLSecDocument.AddEncryptionTemplate(const AId: string;
+  AOptions: TTemplateOptions);
+//const
+//  SiblingNodeName = 'Issuer';
+//  SiblingNodeNS = 'urn:oasis:names:tc:SAML:2.0:assertion';
+var
+  encNode: xmlNodePtr;
+  keyInfoNode: xmlNodePtr;
+  cipherValueNode: xmlNodePtr;
+begin
+  encNode := xmlSecTmplEncDataCreate(FDocPtr, xmlSecTransformAes256CbcGetKlass(), {PAnsiChar(AnsiString(AId))}nil, nil, nil, nil);
+  if encNode = nil then
+  begin
+    raise EXMLError.Create('Error: failed to create encyption template');
+  end;
+
+//  SiblingNode := xmlSecFindNode(xmlDocGetRootElement(FDocPtr), PAnsiChar(AnsiString(SiblingNodeName)), PAnsiChar(AnsiString(SiblingNodeNS)));
+//  if SiblingNode = nil then
+    xmlAddChild(xmlDocGetRootElement(FDocPtr), encNode);
+//  else
+//    xmlAddNextSibling(SiblingNode, signNode);
+
+  if TTemplateOption.InjectCertificate in AOptions then
+  begin
+    // add <dsig:KeyInfo/> node to put key name in the signed document
+    keyInfoNode := xmlSecTmplEncDataEnsureKeyInfo(encNode, nil);
+    if keyInfoNode = nil then
+    begin
+      raise EXMLError.Create('Error: failed to add key info');
+    end;
+
+    cipherValueNode := xmlSecTmplEncDataEnsureCipherValue (encNode);
+    if cipherValueNode = nil then
+    begin
+      raise EXMLError.Create('Error: failed to add cipher value node');
+    end;
+
+  end;
+end;
+
 procedure TXMLSecDocument.AddIDAttr(const AAttributeName, ANodeName,
   ANameSpace: string);
 var
@@ -521,6 +570,15 @@ begin
       raise EXMLError.Create('Error: failed to add Certificate value');
     end;
   end;
+end;
+
+procedure TXMLSecDocument.CheckEncryptionTemplate(const AId: string;
+  AOptions: TTemplateOptions);
+var
+  ANode: IXMLSecNode;
+begin
+  if not TryFindNode(string(xmlSecNodeEncryptedData), string(xmlSecEncNs), ANode) then
+    AddEncryptionTemplate(AId, AOptions);
 end;
 
 procedure TXMLSecDocument.CheckSignatureTemplate(const AId: string; AOptions: TTemplateOptions);
@@ -751,12 +809,12 @@ end;
 
 procedure TSignatureContext.Sign(AXMLDocument: IXMLSecDocument);
 var
-  node: xmlNodePtr;
+  tmpl: xmlNodePtr;
 begin
-  node := (AXMLDocument.FindNode(string(xmlSecNodeSignature), string(xmlSecDSigNs)) as TXMLSecNode).FNode;
+  tmpl := (AXMLDocument.FindNode(string(xmlSecNodeSignature), string(xmlSecDSigNs)) as TXMLSecNode).FNode;
 
   // sign the template
-  if xmlSecDSigCtxSign(dsigCtx, node) < 0 then
+  if xmlSecDSigCtxSign(dsigCtx, tmpl) < 0 then
   begin
     raise EXMLError.Create('Error: signature failed');
   end;
@@ -896,7 +954,7 @@ begin
   node := (AXMLDocument.FindNode(string(xmlSecNodeEncryptedData), string(xmlSecEncNs)) as TXMLSecNode).FNode;
 
   // decrypt the data
-  if (xmlSecEncCtxDecrypt(encCtx, node) < 0) or  (encCtx.result = nil) then
+  if (xmlSecEncCtxDecrypt(encCtx, node) < 0) or (encCtx.result = nil) then
   begin
     raise EXMLError.Create('Error: decryption failed');
   end;
@@ -910,15 +968,40 @@ begin
   if keysMngr <> nil then
     xmlSecKeysMngrDestroy(keysMngr);
 
-  if FOwnsStream then
-    FStream.Free;
+  if FOwnsKey then
+    FKeyStream.Free;
+
+  if FOwnsCertificate then
+    FCertificateStream.Free;
 
   inherited;
 end;
 
-procedure TEncryptionContext.Encrypt(AXMLDocument: IXMLSecDocument);
+procedure TEncryptionContext.EncryptData(AXMLDocument: IXMLSecDocument;
+  AData: TBytes);
+var
+  tmpl: xmlNodePtr;
 begin
-  raise ESAMLNotImplemented.Create('Error: encryption not yet implemented');
+  tmpl := (AXMLDocument.FindNode(string(xmlSecNodeEncryptedData), string(xmlSecEncNs)) as TXMLSecNode).FNode;
+
+  if xmlSecEncCtxBinaryEncrypt(encCtx, tmpl, @AData, Length(AData)) < 0 then
+  begin
+    raise EXMLError.Create('Error: encryption  failed');
+  end;
+end;
+
+procedure TEncryptionContext.EncryptXML(AXMLDocument: IXMLSecDocument; ANode: IXMLSecNode);
+var
+  node: xmlNodePtr;
+  tmpl: xmlNodePtr;
+begin
+  tmpl := (AXMLDocument.FindNode(string(xmlSecNodeEncryptedData), string(xmlSecEncNs)) as TXMLSecNode).FNode;
+  node := (ANode as TXMLSecNode).FNode;
+
+  if xmlSecEncCtxXmlEncrypt(encCtx, tmpl, node) < 0 then
+  begin
+    raise EXMLError.Create('Error: encryption  failed');
+  end;
 end;
 
 function TEncryptionContext.IsEncrypted(AXMLDocument: IXMLSecDocument): Boolean;
@@ -926,6 +1009,42 @@ var
   LNode: IXMLSecNode;
 begin
   Result := AXMLDocument.TryFindNode(string(xmlSecNodeEncryptedData), string(xmlSecEncNs), LNode);
+end;
+
+procedure TEncryptionContext.LoadCertificate(AStream: TStream;
+  AFormat: TKeyDataFormat; AOwnsStream: Boolean);
+var
+  data: xmlSecBytePtr;
+  dataSize: NativeInt;
+begin
+  Assert(AStream <> nil);
+  Assert(AStream.Size > 0);
+
+  FCertificateStream := AStream;
+  FOwnsCertificate := AOwnsStream;
+
+  dataSize := AStream.Size;
+  data := AllocMem(dataSize);
+  try
+    AStream.ReadBuffer(data^, dataSize);
+
+
+//    encCtx.encKey := xmlSecCryptoAppKeyLoadMemory(data, dataSize, xmlSecKeyDataFormat(AFormat), nil, nil, nil);
+//    if encCtx.encKey = nil then
+//    begin
+//      raise EXMLError.Create('Error: failed to load key');
+//    end;
+
+    // load certificate and add to the key
+    //dsigCtx.signKey := xmlSecCryptoAppKeyLoadMemory(data, dataSize, xmlSecKeyDataFormat(AFormat), nil, nil, nil);
+    //xmlSecKeyReadBinaryFile
+    if xmlSecCryptoAppKeyCertLoadMemory(encCtx.encKey, data, dataSize, xmlSecKeyDataFormat(AFormat)) < 0 then
+    begin
+      raise EXMLError.Create('Error: failed to load key');
+    end;
+  finally
+    FreeMem(data);
+  end;
 end;
 
 procedure TEncryptionContext.LoadKey(AStream: TStream; AFormat: TKeyDataFormat;
@@ -938,8 +1057,8 @@ begin
   Assert(AStream <> nil);
   Assert(AStream.Size > 0);
 
-  FStream := AStream;
-  FOwnsStream := AOwnsStream;
+  FKeyStream := AStream;
+  FOwnsKey := AOwnsStream;
 
   dataSize := AStream.Size;
   data := AllocMem(dataSize);

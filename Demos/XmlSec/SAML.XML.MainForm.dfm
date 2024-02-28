@@ -329,4 +329,14 @@ object MainForm: TMainForm
     State = cbChecked
     TabOrder = 14
   end
+  object chkAddEncryptionTemplate: TCheckBox
+    Left = 256
+    Top = 458
+    Width = 201
+    Height = 17
+    Caption = 'Add encryption template'
+    Checked = True
+    State = cbChecked
+    TabOrder = 15
+  end
 end
