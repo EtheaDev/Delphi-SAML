@@ -84,7 +84,8 @@ type
 
   ISignatureContext = interface
     ['{14110BA5-ACEA-4F22-9D52-1A31E4327A96}']
-    procedure LoadKey(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
+    procedure LoadKey(AStream: TStream; AFormat: TKeyDataFormat; const APassword: string; AOwnsStream: Boolean); overload;
+    procedure LoadKey(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean); overload;
     procedure LoadCertificate(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
     function DumpKey: string;
     procedure Sign(AXMLDocument: IXMLSecDocument);
@@ -94,7 +95,8 @@ type
 
   IEncryptionContext = interface
     ['{F7BD8FA6-7626-440D-82A1-1D67DB735FFF}']
-    procedure LoadKey(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
+    procedure LoadKey(AStream: TStream; AFormat: TKeyDataFormat; const APassword: string; AOwnsStream: Boolean); overload;
+    procedure LoadKey(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean); overload;
     function IsEncrypted(AXMLDocument: IXMLSecDocument): Boolean;
     procedure Encrypt(AXMLDocument: IXMLSecDocument);
     procedure Decrypt(AXMLDocument: IXMLSecDocument);
@@ -114,7 +116,8 @@ type
     dsigCtx: xmlSecDSigCtxPtr;
   public
     { ISignatureContext }
-    procedure LoadKey(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
+    procedure LoadKey(AStream: TStream; AFormat: TKeyDataFormat; const APassword: string; AOwnsStream: Boolean); overload;
+    procedure LoadKey(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean); overload;
     procedure LoadCertificate(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
     procedure Sign(AXMLDocument: IXMLSecDocument);
     function DumpKey: string;
@@ -133,7 +136,8 @@ type
     FOwnsStream: Boolean;
   public
     { IEncryptionContext }
-    procedure LoadKey(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean);
+    procedure LoadKey(AStream: TStream; AFormat: TKeyDataFormat; const APassword: string; AOwnsStream: Boolean); overload;
+    procedure LoadKey(AStream: TStream; AFormat: TKeyDataFormat; AOwnsStream: Boolean); overload;
     function IsEncrypted(AXMLDocument: IXMLSecDocument): Boolean;
     procedure Encrypt(AXMLDocument: IXMLSecDocument);
     procedure Decrypt(AXMLDocument: IXMLSecDocument);
@@ -716,12 +720,27 @@ end;
 
 procedure TSignatureContext.LoadKey(AStream: TStream; AFormat: TKeyDataFormat;
   AOwnsStream: Boolean);
+begin
+  LoadKey(AStream, AFormat, '', AOwnsStream);
+end;
+
+procedure TSignatureContext.LoadKey(AStream: TStream; AFormat: TKeyDataFormat;
+  const APassword: string; AOwnsStream: Boolean);
 var
   data: xmlSecBytePtr;
   dataSize: NativeInt;
+  pwd: PAnsiChar;
 begin
   Assert(AStream <> nil);
   Assert(AStream.Size > 0);
+
+  if APassword <> '' then
+    pwd := PAnsiChar(AnsiString(APassword))
+  else
+    pwd := nil;
+
+  FKeyStream := AStream;
+  FOwnsKey := AOwnsStream;
 
   FKeyStream := AStream;
   FOwnsKey := AOwnsStream;
@@ -733,7 +752,7 @@ begin
 
     // load private key, assuming that there is not password */
     //dsigCtx.signKey := xmlSecCryptoAppKeyLoad(key_file, xmlSecKeyDataFormatPem, nil, nil, nil);
-    dsigCtx.signKey := xmlSecCryptoAppKeyLoadMemory(data, dataSize, xmlSecKeyDataFormat(AFormat), nil, nil, nil);
+    dsigCtx.signKey := xmlSecCryptoAppKeyLoadMemory(data, dataSize, xmlSecKeyDataFormat(AFormat), pwd, nil, nil);
     if dsigCtx.signKey = nil then
     begin
       raise EXMLError.Create('Error: failed to load key');
@@ -930,13 +949,25 @@ end;
 
 procedure TEncryptionContext.LoadKey(AStream: TStream; AFormat: TKeyDataFormat;
   AOwnsStream: Boolean);
+begin
+  LoadKey(AStream, AFormat, '', AOwnsStream);
+end;
+
+procedure TEncryptionContext.LoadKey(AStream: TStream; AFormat: TKeyDataFormat;
+  const APassword: string; AOwnsStream: Boolean);
 var
   data: xmlSecBytePtr;
   dataSize: xmlSecSize;
   key: xmlSecKeyPtr;
+  pwd: PAnsiChar;
 begin
   Assert(AStream <> nil);
   Assert(AStream.Size > 0);
+
+  if APassword <> '' then
+    pwd := PAnsiChar(AnsiString(APassword))
+  else
+    pwd := nil;
 
   FStream := AStream;
   FOwnsStream := AOwnsStream;
@@ -947,7 +978,7 @@ begin
     AStream.ReadBuffer(data^, dataSize);
 
     // load private key, assuming that there is not password */
-    key := xmlSecCryptoAppKeyLoadMemory(data, dataSize, xmlSecKeyDataFormat(AFormat), nil, nil, nil);
+    key := xmlSecCryptoAppKeyLoadMemory(data, dataSize, xmlSecKeyDataFormat(AFormat), pwd, nil, nil);
     if key = nil then
     begin
       raise EXMLError.Create('Error: failed to load key');

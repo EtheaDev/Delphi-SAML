@@ -48,7 +48,6 @@ If you want you can extract `xmlsec.exe` and `openssl.exe`. The first can be use
 ## TODO
 
 * 📌 Better metadata support
-* 📌 Password protected certificate support
 * ✨ Identity provider implementation
 * ✨ Basic key format conversion (PEM, DER, ...)
 
