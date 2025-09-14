@@ -1,9 +1,12 @@
-﻿# Delphi SAML implementation
+# Delphi SAML implementation
 
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) 
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-`Delphi SAML` is a SAML implementation written on top of [xmlsec](https://www.aleksey.com/xmlsec/). The basic idea behind the code comes from [samltools](https://github.com/monmohan/samltools). 
+**Delphi SAML** is a SAML implementation written on top of [xmlsec](https://www.aleksey.com/xmlsec/). The basic idea behind the code comes from [samltools](https://github.com/monmohan/samltools).
 
+Supported Delphi versions: from Delphi 10.1 to Delphi 13
+
+![./Docs/SupportingDelphi](./Docs/SupportingDelphi.jpg)
 
 ## How to setup a service provider locally?
 
@@ -11,7 +14,7 @@
 * Copy all the DLL in the Demos\bin folder (see *installation*)
 * Setup a loopback mapping to "sp.samltools.com". On windows:
   * Open `C:\Windows\System32\drivers\etc\hosts`
-  * Add `127.0.0.1 sp.samltools.com` 
+  * Add `127.0.0.1 sp.samltools.com`
 * Compile Demos\SAML\SPDemo.dpr
 * Run it
 * Choose `idp-auth0.ini` in Identity Provider settings
@@ -66,7 +69,7 @@ If you need more help you can read the [API documentation](Docs/APIDoc.md).
 
 `Delphi SAML` is released under the term of the *Apache License*. Here follows the licenses of all dependencies:
 
-| Library  | License   | Using with proprietary applications/libraries | 
+| Library  | License   | Using with proprietary applications/libraries |
 | ---      | ---       | ---- |
 | xmlsec-core  | MIT license   | Yes |
 | xmlsec-openssl  | OpenSSL License  | Yes |
@@ -107,4 +110,25 @@ keygen.bat -h sp.samltools.com -e urn:msingh.samltools:sp -y 10
 ```
 
 See [command line](Docs/CommandLine.md) for further detail.
+
+Release Notes:
+ver.1.3.0 - 13 Mar 2023
+- 64bit support
+- support for xmlsec 1.3
+- New SAML.inc file to use the right version of the DLLs bindings
+- Better demo
+- Support for encrypted private keys
+
+ver.1.2.0 - 11 Jul 2023
+- Certificates and keys can be loaded from a buffer
+- SP configuration improvement: NameIdFormat, Comparison, IssuerNameQualifier, IssuerFormat
+- Support for signatures in nodes different from the root node
+
+ver.1.1.0 - 1 Apr 2023
+- SPID support (Italy's public digital identity)
+- Support for HTTP-POST binding
+- New AuthnRequest attribute "AuthnContext"
+
+ver.1.0.0 - 24 Oct 2022
+- First stable version
 

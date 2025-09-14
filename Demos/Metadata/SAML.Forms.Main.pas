@@ -1,7 +1,7 @@
 {******************************************************************************}
 {                                                                              }
 {  Delphi SAML                                                                 }
-{  Copyright (c) 2022 Ethea                                                    }
+{  Copyright (c) 2022-2025 Ethea                                               }
 {  Author: Luca Minuti                                                         }
 {  https://github.com/EtheaDev/Delphi-SAML                                     }
 {                                                                              }

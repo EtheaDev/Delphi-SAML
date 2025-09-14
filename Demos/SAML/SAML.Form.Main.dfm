@@ -20,7 +20,7 @@ object MainForm: TMainForm
     Top = 69
     Width = 449
     Height = 604
-    ActivePage = TabLog
+    ActivePage = tabIdP
     Align = alClient
     TabOrder = 0
     object tabIdP: TTabSheet
@@ -344,10 +344,6 @@ object MainForm: TMainForm
         ScrollBars = ssBoth
         TabOrder = 0
         WordWrap = False
-        ExplicitLeft = 88
-        ExplicitTop = 128
-        ExplicitWidth = 185
-        ExplicitHeight = 89
       end
     end
   end
